@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1065</width>
-    <height>749</height>
+    <height>750</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -58,7 +58,7 @@
              <item>
               <widget class="QGroupBox" name="groupBox_5">
                <property name="title">
-                <string>Current Library</string>
+                <string>Current Library (Output Directory)</string>
                </property>
                <layout class="QHBoxLayout" name="horizontalLayout_5">
                 <item>
@@ -83,42 +83,42 @@
                  </property>
                  <layout class="QVBoxLayout" name="verticalLayout_2">
                   <item>
-                   <widget class="QCheckBox" name="checkBox">
+                   <widget class="QCheckBox" name="dose100_checkBox">
                     <property name="text">
                      <string>100</string>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="checkBox_2">
+                   <widget class="QCheckBox" name="dose75_checkBox">
                     <property name="text">
                      <string>75</string>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="checkBox_3">
+                   <widget class="QCheckBox" name="dose50_checkBox">
                     <property name="text">
                      <string>50</string>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="checkBox_4">
+                   <widget class="QCheckBox" name="dose25_checkBox">
                     <property name="text">
                      <string>25</string>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="checkBox_5">
+                   <widget class="QCheckBox" name="dose10_checkBox">
                     <property name="text">
                      <string>10</string>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="checkBox_6">
+                   <widget class="QCheckBox" name="dose5_checkBox">
                     <property name="text">
                      <string>5</string>
                     </property>
@@ -134,42 +134,42 @@
                  </property>
                  <layout class="QVBoxLayout" name="verticalLayout_8">
                   <item>
-                   <widget class="QCheckBox" name="checkBox_8">
+                   <widget class="QCheckBox" name="sliceThickness0p6_checkBox">
                     <property name="text">
                      <string>0.6</string>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="checkBox_7">
+                   <widget class="QCheckBox" name="sliceThickness1_checkBox">
                     <property name="text">
                      <string>1.0</string>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="checkBox_9">
+                   <widget class="QCheckBox" name="sliceThickness1p5_checkBox">
                     <property name="text">
                      <string>1.5</string>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="checkBox_10">
+                   <widget class="QCheckBox" name="sliceThickness2_checkBox">
                     <property name="text">
                      <string>2.0</string>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="checkBox_11">
+                   <widget class="QCheckBox" name="sliceThickness3_checkBox">
                     <property name="text">
                      <string>3.0</string>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="checkBox_12">
+                   <widget class="QCheckBox" name="sliceThickness5_checkBox">
                     <property name="text">
                      <string>5.0</string>
                     </property>
@@ -185,21 +185,21 @@
                  </property>
                  <layout class="QVBoxLayout" name="verticalLayout_9">
                   <item>
-                   <widget class="QCheckBox" name="checkBox_13">
+                   <widget class="QCheckBox" name="kernel1_checkBox">
                     <property name="text">
                      <string>Smooth (B10)</string>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="checkBox_14">
+                   <widget class="QCheckBox" name="kernel2_checkBox">
                     <property name="text">
                      <string>Medium (B30)</string>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="checkBox_15">
+                   <widget class="QCheckBox" name="kernel3_checkBox">
                     <property name="text">
                      <string>Sharp/Ramp (B45)</string>
                     </property>
