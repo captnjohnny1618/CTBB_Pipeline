@@ -7,15 +7,18 @@ from time import strftime
 import csv
 
 from ctbb_pipeline_library import ctbb_pipeline_library as ctbb_plib
-from ctbb_pipeline_library import mutex         
+from ctbb_pipeline_library import mutex
+
+def isempty(obj):
+    return not obj
 
 class ctbb_daemon:
 
-    daemon_mutex=None
-    queue_mutex=None
-    pipeline_lib=None
-    devices=[]
-    queue=None
+    daemon_mutex = None
+    queue_mutex  = None
+    pipeline_lib = None
+    devices      = []
+    queue        = None
 
     def __init__(self,path):
         logging.info('CTBB Pipeline Daemon: launching')
@@ -54,28 +57,34 @@ class ctbb_daemon:
 
     def run(self):
         logging.info('CTBB Pipeline Daemon: RUNNING')
-
-        i=0
         
-        while i==0:
+        while not isempty(queue):
             self.queue_mutex.lock(); 
         
             self.refresh_queue()
-            self.check_devices()
 
-        #    for dev in empty_devices:        
-        #        process_next_queue_item(dev);
+            for dev in self.get_empty_devices():
+                qi=self.pop_queue_item()
+                self.process_queue_item(qi,dev)
 
             self.queue_mutex.unlock()
-            time.sleep(10)
-            i+=1
+            time.sleep(5)
+
+    def pop_queue_item(self):
+        # Removes first item in queue
+        return self.queue.pop(0)
 
     def refresh_queue(self):
         with open(os.path.join(self.pipeline_lib.path,'.proc','queue')) as f:
             self.queue=f.read().splitlines();
         logging.debug('Queue is:\n%s' % str(self.queue))
-            
-    def check_devices(self):
+
+    def process_queue_item(self,qi,dev):
+        logging.debug('Current queue item is: %s for device %s' % (qi,dev))
+        
+
+        
+    def get_empty_devices(self):
         logging.info('Checking for device availability')
         empty_devices=[]
         for i in range(len(self.devices)):

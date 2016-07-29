@@ -1,5 +1,5 @@
 Naming conventions for UI objects:
-
+================================================================================
 (function of component)_(type)
 
 camel-case for each part of name
@@ -12,3 +12,8 @@ selectCases_edit
 selectCases_pushButton
 queueHighPriority_pushButton
 queueNormal_pushbutton
+
+Required Python Packages
+================================================================================
+PyQT4
+PyCUDA

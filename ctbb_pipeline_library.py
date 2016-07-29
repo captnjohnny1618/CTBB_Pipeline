@@ -5,7 +5,6 @@ from subprocess import call
 import time
 from time import strftime
 
-
 class mutex:
     name=None;
     mutex_dir=None;
@@ -27,9 +26,14 @@ class mutex:
         os.remove(self.mutex_file);
 
     def check_state(self):
-        #logging.debug('Mutex file: %s' % str(self.mutex_file))
-        #logging.debug('Exists?: %s' % str(os.path.exists(self.mutex_file)))
-        return os.path.exists(self.mutex_file)
+        state=os.path.exists(self.mutex_file)
+
+        if state==True:
+            logging.debug('Mutex file: %s LOCKED' % str(self.mutex_file))
+        else:
+            logging.debug('Mutex file: %s UNLOCKED' % str(self.mutex_file))
+
+        return state
             
 class ctbb_pipeline_library:
     path=None;
