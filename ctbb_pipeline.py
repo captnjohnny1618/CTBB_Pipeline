@@ -13,7 +13,9 @@ class MyWindow(QtGui.QMainWindow):
     ui=None;
     current_cases=None; # Python list of raw data filepaths
     current_library=None; # Path to currently loaded library
-    
+    test_cases=None;
+    test_library=None;
+
     def __init__(self):
         logging.getLogger("PyQt4").setLevel(logging.WARNING)
 
@@ -31,6 +33,37 @@ class MyWindow(QtGui.QMainWindow):
 
         logging.info('GUI Initialization finished')
 
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            self.run_tests();
+
+    def run_tests(self):
+        logging.debug('Running in TESTING mode');        
+        self.test_cases = '/home/john/Code/CTBangBang_Pipeline/sample_case_list.txt';
+        self.test_library = '/home/john/Desktop/pipeline_test_dir/';
+
+        logging.debug('Test case list: ' + self.test_cases)
+        logging.debug('Test library: ' + self.test_library)
+
+        logging.debug('Running case load callback...')
+        self.select_cases_callback()
+        logging.debug('Running case load callback... DONE')
+
+        logging.debug('Running case load callback...')
+        self.select_library_callback()
+        logging.debug('Running case load callback... DONE')
+
+        logging.debug('Setting some checkboxes for testing...')
+        self.ui.dose100_checkBox.setCheckState(True);
+        self.ui.kernel3_checkBox.setCheckState(True);
+        self.ui.sliceThickness5_checkBox.setCheckState(True);                
+        logging.debug('Setting some checkboxes for testing... DONE')
+
+        logging.debug('Running queue NORMAL callback...');
+        self.queue_normal_callback();
+        logging.debug('Running queue NORMAL callback... DONE');
+        
+        logging.debug('Current level of testing completed!');
+        
     def testCallback(self):
         print('Test worked!');
 
@@ -40,7 +73,10 @@ class MyWindow(QtGui.QMainWindow):
         accepted_filetypes=['.ctd','.ptr','.ima','.txt']
 
         # File selection dialog
-        fname=QtGui.QFileDialog.getOpenFileName(self,'Open file','/home');
+        if not self.test_cases:
+            fname=QtGui.QFileDialog.getOpenFileName(self,'Open file','/home');
+        else:
+            fname=self.test_cases
 
         # Return if user cancelled
         if not fname:
@@ -86,7 +122,12 @@ class MyWindow(QtGui.QMainWindow):
             
     def select_library_callback(self):
         logging.info('Select library callback active')
-        dirname=QtGui.QFileDialog.getExistingDirectory(self,'Open Directory','/home');
+
+        if not self.test_library:        
+            dirname=QtGui.QFileDialog.getExistingDirectory(self,'Open Directory','/home');
+        else:
+            dirname=self.test_library
+
         if not dirname:
             return;
         else:
@@ -111,14 +152,15 @@ class MyWindow(QtGui.QMainWindow):
         self.flush_jobs_to_queue('high',ds,sts,ks);
         self.dispatch_ctbb_pipeline_daemon()
 
-    def dispatch_ctbb_pipeline_daemon():
-        call(['python',]
-       
-    
+    def dispatch_ctbb_pipeline_daemon(self):
+        logging.info('Launching pipeline daemon')
+        command="python ctbb_pipeline_daemon.py %s" % self.current_library.path
+        os.system("nohup %s >/dev/null 2>&1 &" % command);
 
     def keyPressEvent(self,e):
         if e.matches(QtGui.QKeySequence.Close) or e.matches(QtGui.QKeySequence.Quit):
-            sys.exit('User quit via keystroke')
+            logging.info('User quit via keystroke')
+            sys.exit()
 
     def flush_jobs_to_queue(self,priority,ds,sts,ks):
         logging.info('Sending jobs to queue')
@@ -259,7 +301,7 @@ if __name__ == '__main__':
         logging.basicConfig(format=('%(asctime)s %(message)s'), level=logging.DEBUG)
     else:
         logdir=os.path.join(os.path.dirname(os.path.abspath(__file__)),'log');
-        logfile=os.path.join(logdir,('%s.log' % strftime('%y%m%d_%H%M%S')))
+        logfile=os.path.join(logdir,('%s_interface.log' % strftime('%y%m%d_%H%M%S')))
 
         if not os.path.isdir(logdir):
             os.mkdir(logdir);
