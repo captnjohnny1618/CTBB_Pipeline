@@ -5,9 +5,14 @@ from subprocess import call
 from time import strftime
 from PyQt4 import QtGui, uic
 
+from ctbb_pipeline_library import ctbb_pipeline_library as ctbb_plib
+from ctbb_pipeline_library import mutex 
+
 class MyWindow(QtGui.QMainWindow):
 
     ui=None;
+    current_cases=None; # Python list of raw data filepaths
+    current_library=None; # Path to currently loaded library
     
     def __init__(self):
         logging.getLogger("PyQt4").setLevel(logging.WARNING)
@@ -68,14 +73,16 @@ class MyWindow(QtGui.QMainWindow):
         self.ui.selectCases_edit.setText(fname)
 
         # If text file, load into memory and display in box
-
         # Run ctbb_info to generate base parameter files
         prmb_string=get_base_parameter_files(case_list)
 
         for i in range(0,len(prmb_string)):
+            self.ui.PRMEditor_textEdit.insertPlainText('#####! DO NOT EDIT THIS LINE !#####\n');
             self.ui.PRMEditor_textEdit.insertPlainText('%%% Edit below for file: ' + case_list[i] + ' %%%\n\n');
             self.ui.PRMEditor_textEdit.insertPlainText(prmb_string[i]);
             self.ui.PRMEditor_textEdit.insertPlainText('\n\n');
+
+        self.current_cases=case_list;
             
     def select_library_callback(self):
         logging.info('Select library callback active')
@@ -85,33 +92,78 @@ class MyWindow(QtGui.QMainWindow):
         else:
             dirname=str(dirname)
 
-        if not is_ctbb_pipeline_library(dirname):
-            init_ctbb_pipeline_library(dirname)
-        else:
-            load_ctbb_pipeline_library(dirname)
+        pipeline_lib=ctbb_plib(dirname)
             
         self.ui.selectLibrary_edit.setText(dirname)
+        self.current_library=pipeline_lib
 
     def queue_normal_callback(self):
-        logging.info('Queue normal callback active');
-        self.flush_prmbs();
-        ctbb_pipeline_library
-        
-        ds,sts,ks=self.gather_run_parameters();
+        logging.info('Queue normal callback active')        
+        self.flush_prmbs()
+        ds,sts,ks=self.gather_run_parameters()
+        self.flush_jobs_to_queue('normal',ds,sts,ks);
+        self.dispatch_ctbb_pipeline_daemon()
 
-
-        
-        
     def queue_high_priority_callback(self):
-        print('Queue high priority callback active');
+        logging.info('Queue high priority callback active')
+        self.flush_prmbs()
+        ds,sts,ks=self.gather_run_parameters()
+        self.flush_jobs_to_queue('high',ds,sts,ks);
+        self.dispatch_ctbb_pipeline_daemon()
+
+    def dispatch_ctbb_pipeline_daemon():
+        call(['python',]
+       
+    
 
     def keyPressEvent(self,e):
         if e.matches(QtGui.QKeySequence.Close) or e.matches(QtGui.QKeySequence.Quit):
             sys.exit('User quit via keystroke')
 
-    def queue(self):
-        print('Select cases callback active');
+    def flush_jobs_to_queue(self,priority,ds,sts,ks):
+        logging.info('Sending jobs to queue')
 
+        queue_strings=[]
+        
+        m=mutex('queue',self.current_library.mutex_dir)
+        m.lock()
+
+        # Form the strings to be written
+        for c in self.current_cases:
+            if not c:
+                continue
+            for dose in ds:
+                for st in sts:
+                    for kernel in ks:
+                        queue_strings.append(('%s,%s,%s,%s\n') % (c,dose,kernel,st));
+
+
+        queue_file=os.path.join(self.current_library.path,'.proc','queue')
+        
+        # If priority "normal" write to end of file
+        if priority == 'normal':
+            with open(queue_file,'a') as f:
+                for q_string in queue_strings:
+                    f.write(q_string)
+
+        # If priority "high" write to beginning of file
+        # Read queue into memory
+        elif priority == 'high':
+            with open(queue_file,'r') as f:
+                existing_queue=f.read()
+            
+            # Pop new items into beginning of queue and then write rest of queue back
+            with open(queue_file,'w') as f:
+                for q_string in queue_strings:
+                    f.write(q_string)
+                f.write(existing_queue)
+
+        # Handle any weirdness
+        else:
+            logging.error('Unknown queue priority request')
+
+        m.unlock()
+        
     def error_dialog(self,s):
         msg = QtGui.QMessageBox();
         msg.setIcon(QtGui.QMessageBox.Critical)
@@ -120,6 +172,18 @@ class MyWindow(QtGui.QMainWindow):
         msg.setStandardButtons(QtGui.QMessageBox.Close)
         msg.exec_()
 
+    def flush_prmbs(self):
+        raw_prm_text=str(self.ui.PRMEditor_textEdit.toPlainText())
+        prmb_text=raw_prm_text.split('#####! DO NOT EDIT THIS LINE !#####\n')
+        for i in range(1,len(prmb_text)):
+
+            output_file_name=os.path.basename(self.current_cases[i-1])+'.prmb'
+            output_dir_name=os.path.join(self.current_library.path,'raw')
+            output_fullpath=os.path.join(output_dir_name,output_file_name);
+            
+            with open(output_fullpath,'w') as f:
+                f.write(prmb_text[i])
+        
     def gather_run_parameters(self):
 
         doses=[];
@@ -179,7 +243,8 @@ def get_base_parameter_files(file_list):
             continue
         
         # Generate the parameter file
-        call(['ctbb_info','-b',f]);
+        devnull=open(os.devnull,'w')
+        call(['ctbb_info','-b',f],stdout=devnull,stderr=devnull);
 
         # Open the parameter file and read into pipeline
         with open(f+'.prmb') as f_prmb:
@@ -187,34 +252,6 @@ def get_base_parameter_files(file_list):
 
     return prmbs
 
-def is_ctbb_pipeline_library(path):
-    if os.path.exists(os.path.join(path,'.ctbb_pipeline_lib')):
-        tf=True
-    else:
-        tf=False
-        
-    return tf
-    
-def init_ctbb_pipeline_library(path):
-    logging.info('Initializing pipeline library for directory: ' + path)
-    touch(os.path.join(path,'.ctbb_pipeline_lib'))
-    touch(os.path.join(path,'case_list.txt'))
-    touch(os.path.join(path,'recons.csv'))
-    touch(os.path.join(path,'README.txt'))
-    os.mkdir(os.path.join(path,'raw'))
-    os.mkdir(os.path.join(path,'recon'))
-    os.mkdir(os.path.join(path,'.proc'))
-    touch(os.path.join(path,'.proc','queue'))
-    touch(os.path.join(path,'.proc','mutex'))
-    touch(os.path.join(path,'.proc','done'))
-
-def load_ctbb_pipeline_library(path):
-    logging.info('Loading a prexisting library (although not actually implemented yet..)');
-    
-def touch(path):
-    with open(path,'a'):
-        os.utime(path,None);
-    
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
 
@@ -231,5 +268,3 @@ if __name__ == '__main__':
 
     window = MyWindow()
     sys.exit(app.exec_())
-
-    
