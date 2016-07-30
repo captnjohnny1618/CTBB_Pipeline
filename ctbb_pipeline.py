@@ -306,7 +306,7 @@ if __name__ == '__main__':
         if not os.path.isdir(logdir):
             os.mkdir(logdir);
 
-        logging.basicConfig(format=('%(asctime)s %(message)s'),filename=logfile, level=logging.DEBUG)
+        logging.basicConfig(format=('%(asctime)s %(message)s'),filename=logfile, level=logging.INFO)
 
     window = MyWindow()
     sys.exit(app.exec_())
