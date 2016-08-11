@@ -5,6 +5,10 @@ from subprocess import call
 import time
 from time import strftime
 
+import random
+import tempfile
+from hashlib import md5
+
 class mutex:
     name=None;
     mutex_dir=None;
@@ -115,8 +119,72 @@ class ctbb_pipeline_library:
         touch(os.path.join(self.path,'.proc','done'))
         touch(os.path.join(self.path,'.proc','error'))
 
+    def have_raw_data(self,filepath):
+        # Return True                   IF raw data found in case list with correct filepath
+        # Return filepath entry         IF hash value found, but not filepath
+        # Return path to temporary file IF neither hash or filepath found in case list
+        # Return false                  IF original file does not exist
+
+        case_list=self.__get_case_list__()
+
+        if not os.path.exists(filepath):
+            # Requested file does not exist
+            logging.info('Requested raw data file does not exist')
+            raw_data_present=False;
+        
+        else:
+            if filepath in case_list.values():
+                # Exact filepath match (have data)
+                logging.info('Exact filepath found in case list')
+                raw_data_present=True
+            else:
+                local_file_info=self.__get_local_file_hash__(filepath)
+                digest=local_file_info[0];
+                tmp_path=local_file_info[1];
+                if not (digest in case_list.keys()):
+                    # File not found in case list, request to add
+                    logging.info('Raw data file not found in case list')
+                    raw_data_present=tmp_path
+                else:
+                    # File found, but under different path (i.e. do not copy, just add entry to case lists
+                    logging.info('Hash value found but under different filename')
+                    raw_data_present=digest
+
+        return raw_data_present
+    
+    def add_raw_data(self,filepath_source):
+        out_dir=os.path.join(self.path,'raw','100')
+        if not os.path.isdir(out_dir):
+            os.mkdir(out_dir)
+        
+        os.rename(filepath_source,
+        
+    def __get_case_list__(self):
+        # Returns current case list as dictionary with filepaths as keys and file hashes as values
+        with open(os.path.join(self.path,'case_list.txt')) as f:
+            case_list=f.read().splitlines();
+            for i in range(len(case_list)):
+                if case_list:
+                    curr_case=case_list[i].split(',')
+                    digest=curr_case[1]
+                    filepath=curr_case[0]
+                    case_list_dict[digest]=filepath;
+
+        return case_list_dict
+
+    def __get_local_file_hash__(self,filepath):
+        # Copy file to temporary location
+        tmp_filepath=os.path.join(tempfile.mkdtemp(),random.getrandbits(128))
+        logging.debug('Temporary path to file: %s' % tmp_filepath)
+        shutil.copy(filepath,tmp_filepath)
+        logging.info("Computing hash of %s" % filepath)
+        
+        with open(tmp_filepath,'rb') as f:
+            digest=md5(f.read()).hexdigest()
+
+        return (digest,tmp_filepath)
+                  
 
 def touch(path):
     with open(path,'a'):
         os.utime(path,None);
-                                  
