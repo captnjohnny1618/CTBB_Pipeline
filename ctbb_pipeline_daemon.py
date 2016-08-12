@@ -27,6 +27,10 @@ class ctbb_daemon:
         self.queue_mutex=mutex('queue',self.pipeline_lib.mutex_dir)
         self.get_devices()
 
+        self.queue_mutex.lock()
+        self.refresh_queue();
+        self.queue_mutex.unlock()
+
     def __enter__(self):
         self.daemon_mutex.lock()
         return self
@@ -58,13 +62,16 @@ class ctbb_daemon:
     def run(self):
         logging.info('CTBB Pipeline Daemon: RUNNING')
         
-        while not isempty(queue):
+        while not isempty(self.queue):
             self.queue_mutex.lock(); 
         
             self.refresh_queue()
 
+            logging.info(str(self.queue))
+            
             for dev in self.get_empty_devices():
                 qi=self.pop_queue_item()
+                logging.debug('Popping %s from queue' % qi)
                 self.process_queue_item(qi,dev)
 
             self.queue_mutex.unlock()
@@ -72,17 +79,25 @@ class ctbb_daemon:
 
     def pop_queue_item(self):
         # Removes first item in queue
-        return self.queue.pop(0)
+        # Writes queue back to disk
+        qi=self.queue.pop(0)
+        logging.info(qi)
+
+        with open(os.path.join(self.pipeline_lib.path,'.proc','queue'),'w') as f:
+            for item in self.queue:
+                f.write('%s\n' % item);        
+        return qi
 
     def refresh_queue(self):
         with open(os.path.join(self.pipeline_lib.path,'.proc','queue')) as f:
             self.queue=f.read().splitlines();
-        logging.debug('Queue is:\n%s' % str(self.queue))
+        #logging.debug('Queue is:\n%s' % str(self.queue))
 
     def process_queue_item(self,qi,dev):
-        logging.debug('Current queue item is: %s for device %s' % (qi,dev))
-        
-
+        logging.debug('Current queue item is: %s for device %s' % (qi,dev.name))
+        call_command = ('python ctbb_queue_item.py %s %s %s' % (qi,dev.name,self.pipeline_lib.path))
+        logging.debug('Sending to system call: %s' % call_command)
+        self.__child_process__(call_command)
         
     def get_empty_devices(self):
         logging.info('Checking for device availability')

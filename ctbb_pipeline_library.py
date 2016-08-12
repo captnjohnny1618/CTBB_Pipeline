@@ -1,5 +1,6 @@
 import sys
 import os
+import shutil
 import logging
 from subprocess import call
 import time
@@ -41,10 +42,10 @@ class mutex:
             
 class ctbb_pipeline_library:
     path=None;
-    mutex_dir=None;
+    mutex_dir=None;    
     raw_dir=None;
     recon_dir=None;
-    
+
     def __init__(self,path):
         self.path=path;
         self.mutex_dir=os.path.join(path,'.proc','mutex');
@@ -119,62 +120,67 @@ class ctbb_pipeline_library:
         touch(os.path.join(self.path,'.proc','done'))
         touch(os.path.join(self.path,'.proc','error'))
 
-    def have_raw_data(self,filepath):
-        # Return True                   IF raw data found in case list with correct filepath
-        # Return filepath entry         IF hash value found, but not filepath
-        # Return path to temporary file IF neither hash or filepath found in case list
-        # Return false                  IF original file does not exist
-
+    def locate_raw_data(self,filepath):
+        case_list_mutex=mutex('case_list',self.mutex_dir)
+        case_list_mutex.lock()
+        
+        # Returns either a hash value (of raw file) or "False" if raw data unavailable
         case_list=self.__get_case_list__()
 
-        if not os.path.exists(filepath):
-            # Requested file does not exist
-            logging.info('Requested raw data file does not exist')
-            raw_data_present=False;
-        
+        # Check if we already have file in library
+        if filepath in case_list.keys():
+            logging.info('File %s (%s) found case library' % (filepath,case_list[filepath]))
+            case_id=case_list[filepath]
         else:
-            if filepath in case_list.values():
-                # Exact filepath match (have data)
-                logging.info('Exact filepath found in case list')
-                raw_data_present=True
-            else:
+            if os.path.exists(filepath):
                 local_file_info=self.__get_local_file_hash__(filepath)
-                digest=local_file_info[0];
-                tmp_path=local_file_info[1];
+                digest=local_file_info[0]
+                tmp_path=local_file_info[1]
                 if not (digest in case_list.keys()):
-                    # File not found in case list, request to add
-                    logging.info('Raw data file not found in case list')
-                    raw_data_present=tmp_path
-                else:
-                    # File found, but under different path (i.e. do not copy, just add entry to case lists
-                    logging.info('Hash value found but under different filename')
-                    raw_data_present=digest
+                    logging.info('Adding raw data file to library')
+                    self.__add_raw_data__(filepath,tmp_path,digest)
+                case_id=digest;
+            else:
+                # Requested file does not exist
+                logging.info('Requested raw data file does not exist')
+                case_id=False
 
-        return raw_data_present
+        case_list_mutex.unlock();
+        
+        return case_id
     
-    def add_raw_data(self,filepath_source):
+    def __add_raw_data__(self,filepath_org,filepath_tmp,digest):
         out_dir=os.path.join(self.path,'raw','100')
         if not os.path.isdir(out_dir):
             os.mkdir(out_dir)
         
-        os.rename(filepath_source,
+        os.rename(filepath_tmp,os.path.join(out_dir,digest))
+        self.__add_to_case_list__(filepath_org,digest)
+
+    def __add_to_case_list__(self,filepath,digest):
+        logging.info("Adding %s:%s to case list" % (digest,filepath))
+        with open(os.path.join(self.path,'case_list.txt'),'a') as f:
+            f.write("%s,%s\n" % (filepath,digest))
         
     def __get_case_list__(self):
         # Returns current case list as dictionary with filepaths as keys and file hashes as values
-        with open(os.path.join(self.path,'case_list.txt')) as f:
-            case_list=f.read().splitlines();
+        case_list_dict={}
+        
+        with open(os.path.join(self.path,'case_list.txt'),'r') as f:
+            case_list=f.read().splitlines()
             for i in range(len(case_list)):
                 if case_list:
                     curr_case=case_list[i].split(',')
                     digest=curr_case[1]
                     filepath=curr_case[0]
                     case_list_dict[digest]=filepath;
+                    case_list_dict[filepath]=digest;
 
         return case_list_dict
 
     def __get_local_file_hash__(self,filepath):
         # Copy file to temporary location
-        tmp_filepath=os.path.join(tempfile.mkdtemp(),random.getrandbits(128))
+        tmp_filepath=os.path.join(tempfile.mkdtemp(),str(random.getrandbits(128)))
         logging.debug('Temporary path to file: %s' % tmp_filepath)
         shutil.copy(filepath,tmp_filepath)
         logging.info("Computing hash of %s" % filepath)
