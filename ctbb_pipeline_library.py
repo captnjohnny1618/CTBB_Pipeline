@@ -5,6 +5,7 @@ import logging
 from subprocess import call
 import time
 from time import strftime
+from glob import glob
 
 import random
 import tempfile
@@ -99,7 +100,10 @@ class ctbb_pipeline_library:
         return tf;
 
     def load(self):
-        logging.debug('Nothing to be done to load library currently');
+        logging.debug('Nothing to be done to load library currently')
+        # Check the case list vs raw data files present?
+
+        # Update recon list from files present?
                                                            
     def repair(self):
         touch(os.path.join(self.path,'.ctbb_pipeline_lib'))
@@ -182,6 +186,39 @@ class ctbb_pipeline_library:
 
         return exit_status
 
+    def refresh_recon_list(self):
+        case_list=self.__get_case_list__()
+        
+        # Get list of all IMG files in recon directory
+        paths=glob(os.path.join(self.path,'recon','*/*/*.img'))
+
+        # Parse paths into sensible things:
+        filenames=[]
+        csv_entries=[]
+        
+        for p in paths:
+            curr_file=os.path.basename(p)
+            curr_file=os.path.splitext(curr_file)[0]
+            csv_entries.append(curr_file.split('_'))
+
+        for i in range(len(csv_entries)):
+            curr_item=csv_entries[i]
+            # Clean up dose kernel and slice thickness entries
+            curr_item[1]=curr_item[1].strip('d')  # dose
+            curr_item[2]=curr_item[2].strip('k')  # kernel
+            curr_item[3]=curr_item[3].strip('st') # slice thickness
+            
+            curr_item.insert(0,case_list[curr_item[0]]) # inserts the orignal case filepath at beginning of list
+            curr_item.append(paths[i]) # appends full path to reconstruction at end of list
+
+            csv_entries[i]=curr_item
+
+        import csv
+        with open(os.path.join(self.path,'recons.csv'),'w') as f:
+            wr=csv.writer(f,quoting=csv.QUOTE_MINIMAL)
+            for c in csv_entries:
+                wr.writerow(c)
+            
     def __add_raw_data__(self,filepath_org,filepath_tmp,digest):
         out_dir=os.path.join(self.path,'raw','100')
         if not os.path.isdir(out_dir):
@@ -231,7 +268,22 @@ class ctbb_pipeline_library:
         #subprocess.Popen(c.split(' '),stderr=devnull,stdout=devnull) # non-blocking
         logging.debug('System call exited with status %s' % str(exit_code))
         return exit_code
+
+    # def __add_finished_recon__(self,entry):
+        
+    #     recon_list_mutex=mutex('recon_list',self.mutex_dir)
+    #     recon_list_mutex.lock();
+
+    #     with open(os.path.join(self.path,'recons.csv')):
+            
+
+        # recon_list_mutex.unlock();
                   
 def touch(path):
     with open(path,'a'):
         os.utime(path,None);
+
+if __name__=="__main__":
+    lib_path=sys.argv[1]
+    ctbb_lib=ctbb_pipeline_library(lib_path)
+    ctbb_lib.refresh_recon_list()

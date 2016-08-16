@@ -3,7 +3,7 @@ import os
 import logging
 from subprocess import call
 from time import strftime
-from PyQt4 import QtGui, uic
+from PyQt4 import QtGui, QtCore, uic
 
 from ctbb_pipeline_library import ctbb_pipeline_library as ctbb_plib
 from ctbb_pipeline_library import mutex 
@@ -137,6 +137,8 @@ class MyWindow(QtGui.QMainWindow):
             
         self.ui.selectLibrary_edit.setText(dirname)
         self.current_library=pipeline_lib
+
+        self.refresh_library_tab()
 
     def queue_normal_callback(self):
         logging.info('Queue normal callback active')        
@@ -274,6 +276,52 @@ class MyWindow(QtGui.QMainWindow):
 
         return doses,slice_thicknesses,kernels
 
+    def refresh_library_tab(self):
+        logging.info('Refreshing library tab')
+        self.current_library.refresh_recon_list()
+        with open(os.path.join(self.current_library.path,'recons.csv'),'r') as f:
+            recon_list=f.read().splitlines();
+            
+        for i in range(len(recon_list)):
+            recon_list[i]=recon_list[i].split(',')
+
+        table_model=MyTableModel(recon_list)
+        self.ui.library_tableView.setModel(table_model)
+
+class MyTableModel(QtCore.QAbstractTableModel):
+    header_labels=['File','Case ID','Dose','Kernel','Slice Thickness','Recon Path']
+    
+    def __init__(self, datain, parent=None, *args):
+        QtCore.QAbstractTableModel.__init__(self, parent, *args)
+        self.arraydata = datain
+
+    def rowCount(self, parent):
+        return len(self.arraydata)
+
+    def columnCount(self, parent):
+        return len(self.arraydata[0])
+
+    def data(self, index, role):
+        if not index.isValid():
+            return QtCore.QVariant()
+        elif role != QtCore.Qt.DisplayRole:
+            return QtCore.QVariant()
+        return QtCore.QVariant(self.arraydata[index.row()][index.column()])
+
+    def headerData(self,section,orientation,role=QtCore.Qt.DisplayRole):
+
+        if role == QtCore.Qt.DisplayRole and orientation == QtCore.Qt.Horizontal:
+            return self.header_labels[section]
+        return QtCore.QAbstractTableModel.headerData(self, section, orientation, role)
+
+    def sort(self, Ncol, order):
+        import operator
+        self.emit(QtCore.SIGNAL("layouAboutToBeChanged()"))
+        self.arraydata = sorted(self.arraydata, key=operator.itemgetter(Ncol))
+        if order == QtCore.Qt.DescendingOrder:
+            self.arraydata.reverse()
+        self.emit(QtCore.SIGNAL("layoutChanged()"))
+        
 def get_base_parameter_files(file_list):    
     logging.info('Generating parameter files and reading into pipeline');
 

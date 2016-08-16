@@ -116,7 +116,7 @@ class ctbb_queue_item:
         exit_status=qi_status.SUCCESS;
         logging.info('Launching reconstruction')
 
-        exit_code=self.__child_process__(('ctbb_recon -v --timing %s' % self.prm_filepath),self.prm_filepath+".stdout",self.prm_filepath+".stderr")
+        exit_code=self.__child_process__(('ctbb_recon -v --timing --device=%s %s' % (self.device.name.strip('dev'),self.prm_filepath)),self.prm_filepath+".stdout",self.prm_filepath+".stderr")
         if exit_code !=0:
             logging.info('Something went wrong with the reconstruction')
             exit_status=qi_status.RECONSTRUCTION_ERROR
@@ -151,9 +151,7 @@ class ctbb_queue_item:
         with open(stdout_file,'w') as stdout_fid:
             with open(stderr_file,'w') as stderr_fid:
                 logging.info('Dispatching system call: %s' % c)
-                #exit_code=os.system("%s >/dev/null 2>&1" % c); # Blocking call? &
                 exit_code=subprocess.call(c.split(' '),stdout=stdout_fid,stderr=stderr_fid)
-                #subprocess.Popen(c.split(' '),stderr=devnull,stdout=devnull) # non-blocking
                 logging.debug('System call exited with status %s' % str(exit_code))
                 
         return exit_code
