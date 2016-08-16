@@ -134,6 +134,7 @@ class ctbb_pipeline_library:
         else:
             if os.path.exists(filepath):
                 local_file_info=self.__get_local_file_hash__(filepath)
+
                 digest=local_file_info[0]
                 tmp_path=local_file_info[1]
                 if not (digest in case_list.keys()):
@@ -148,7 +149,39 @@ class ctbb_pipeline_library:
         case_list_mutex.unlock();
         
         return case_id
-    
+
+    def locate_reduced_dose_data(self,filepath,dose):
+        logging.info('Checking for reduced dose data')
+
+        exit_status=0
+
+        case_list_mutex=mutex('case_list',self.mutex_dir)
+        case_list_mutex.lock()
+
+        case_list=self.__get_case_list__()
+
+        case_id=case_list[filepath]
+        logging.info('Case ID for current case is %s' % case_id)
+        full_dose_filepath=os.path.join(self.raw_dir,'100',case_id)
+        reduced_dose_filepath=os.path.join(self.raw_dir,str(dose),case_id)
+
+        # If reduction dir doesn't exist, create it.
+        if not os.path.isdir(os.path.join(self.raw_dir,str(dose))):
+            os.mkdir(os.path.join(self.raw_dir,str(dose)))
+        
+        if os.path.exists(reduced_dose_filepath):
+            logging.info('Reduced dose data found')
+        else:
+            logging.info('Reduced dose data not found.  Running dose reduction tool.')
+            system_call="ctbb_simdose %s %s %s" % ( full_dose_filepath,str(dose),reduced_dose_filepath )
+            logging.info('Sending the following call to system: %s' % system_call);
+            exit_status=self.__child_process__(system_call)
+            logging.info('Dose reduction job exited with exit status %s' % str(exit_status))
+            
+        case_list_mutex.unlock()
+
+        return exit_status
+
     def __add_raw_data__(self,filepath_org,filepath_tmp,digest):
         out_dir=os.path.join(self.path,'raw','100')
         if not os.path.isdir(out_dir):
@@ -189,8 +222,16 @@ class ctbb_pipeline_library:
             digest=md5(f.read()).hexdigest()
 
         return (digest,tmp_filepath)
-                  
 
+    def __child_process__(self,c):
+        import subprocess
+        exit_code=0
+        devnull=open('/dev/null','w')        
+        exit_code=os.system("%s > /dev/null 2>&1" % c); # Blocking call? // 
+        #subprocess.Popen(c.split(' '),stderr=devnull,stdout=devnull) # non-blocking
+        logging.debug('System call exited with status %s' % str(exit_code))
+        return exit_code
+                  
 def touch(path):
     with open(path,'a'):
         os.utime(path,None);

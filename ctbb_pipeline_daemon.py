@@ -40,7 +40,10 @@ class ctbb_daemon:
         self.daemon_mutex.unlock()
 
     def __child_process__(self,c):
-        os.system("nohup %s >/dev/null 2>&1 &" % c);
+        import subprocess
+        devnull=open('/dev/null','w')        
+        #os.system("nohup %s >/dev/null 2>&1 &" % c); # Blocking call?
+        subprocess.Popen(c.split(' '),stderr=devnull,stdout=devnull) # non-blocking
 
     def get_devices(self):
         import pycuda.autoinit

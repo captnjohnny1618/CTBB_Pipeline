@@ -16,11 +16,14 @@ class qi_status(Enum):
     SUCCESS              = 0
     NO_RAW               = 1
     DOSE_REDUCTION_ERROR = 2
-    RECONSTRUCTION_ERROR = 3
+    PRM_CREATION_ERROR   = 3
+    RECONSTRUCTION_ERROR = 4
 
 class ctbb_queue_item:
 
     filepath        = None
+    prm_filepath    = None
+    case_id         = None # md5 hash of original file    
     dose            = None
     slice_thickness = None
     kernel          = None
@@ -52,22 +55,72 @@ class ctbb_queue_item:
     def get_raw_data(self):
         exit_status=qi_status.SUCCESS;
         logging.info('Making sure we have raw data files')
-        self.current_library.locate_raw_data(self.filepath)
+        self.case_id=self.current_library.locate_raw_data(self.filepath)
+        if not self.case_id:
+            exit_status=qi_status.NO_RAW
         return exit_status
 
     def simulate_reduced_dose(self):
         exit_status=qi_status.SUCCESS;
         logging.info('Simulating reduced dose data')
+        exit_code=self.current_library.locate_reduced_dose_data(self.filepath,self.dose)
+        if exit_code != 0:
+            exit_status = qi_status.DOSE_REDUCTION_ERROR
         return exit_status
 
     def make_final_prm(self):
-        exit_status=qi_status.SUCCESS;        
+        exit_status=qi_status.SUCCESS;
         logging.info('Assembling final PRM file')
+
+        # Configure all of the paths we'll be using. Create any that don't already exist.
+        base_filename=os.path.basename(self.filepath)
+        prmb_filepath=os.path.join(self.current_library.raw_dir,base_filename + '.prmb');
+        prm_dirpath=os.path.join(self.current_library.recon_dir,str(self.dose),( '%s_k%s_st%s' % (self.case_id,self.kernel,self.slice_thickness)))
+        if not os.path.isdir(prm_dirpath):
+            os.makedirs(prm_dirpath)
+        prm_filepath=os.path.join(prm_dirpath,("%s_d%s_k%s_st%s.prm" % (self.case_id,self.dose,self.kernel,self.slice_thickness)));
+
+        # Copy the base parameter file into the final output dir
+        try :
+            shutil.copy(prmb_filepath,prm_filepath)
+            
+            # Set up any strings we'll write to our final parameter file
+            raw_data_dir=os.path.join(self.current_library.raw_dir,self.dose)
+            raw_data_file=self.case_id
+            recon_outdir=prm_dirpath
+            recon_file=("%s_d%s_k%s_st%s.img" % (self.case_id,self.dose,self.kernel,self.slice_thickness))
+
+            # Define a helper function
+            def printout(f,a,b): 
+                f.write(a+"\t"+str(b))
+                f.write("\n")
+            
+            with open(prm_filepath,"a") as f_prm:
+                printout(f_prm,"RawDataDir:",raw_data_dir)
+                printout(f_prm,"RawDataFile:",raw_data_file)
+                printout(f_prm,"OutputDir:",recon_outdir)
+                printout(f_prm,"OutputFile:",recon_file)
+                printout(f_prm,"ReconKernel:",self.kernel)
+                printout(f_prm,"SliceThickness:",self.slice_thickness)
+                printout(f_prm,"AdaptiveFiltration:","1.0")
+
+            self.prm_filepath=prm_filepath
+                
+        except IOError, e:
+            logging.info("Something went wrong when creating PRM file: %s" % e)
+            exit_status=qi_status.PRM_CREATION_ERROR            
+            
         return exit_status
         
     def dispatch_recon(self):
-        exit_status=qi_status.SUCCESS;        
-        logging.info('Launching reconstruction')    
+        exit_status=qi_status.SUCCESS;
+        logging.info('Launching reconstruction')
+
+        exit_code=self.__child_process__(('ctbb_recon -v --timing %s' % self.prm_filepath),self.prm_filepath+".stdout",self.prm_filepath+".stderr")
+        if exit_code !=0:
+            logging.info('Something went wrong with the reconstruction')
+            exit_status=qi_status.RECONSTRUCTION_ERROR
+        
         return exit_status
         
     def clean_up(self,exit_status):
@@ -86,11 +139,24 @@ class ctbb_queue_item:
             error_mutex.lock()
 
             with open(os.path.join(self.current_library.path,'.proc','error'),'a') as f:
-                f.write("%s:%s\n" % (self.qi_raw,exit_status.name))
+                f.write("%s:%s\n" % (self.qi_raw,str(exit_status)))
 
             error_mutex.unlock()
         
         logging.info('Cleaning up queue item')
+
+    def __child_process__(self,c,stdout_file="/dev/null",stderr_file="/dev/null"):
+        import subprocess
+        
+        with open(stdout_file,'w') as stdout_fid:
+            with open(stderr_file,'w') as stderr_fid:
+                logging.info('Dispatching system call: %s' % c)
+                #exit_code=os.system("%s >/dev/null 2>&1" % c); # Blocking call? &
+                exit_code=subprocess.call(c.split(' '),stdout=stdout_fid,stderr=stderr_fid)
+                #subprocess.Popen(c.split(' '),stderr=devnull,stdout=devnull) # non-blocking
+                logging.debug('System call exited with status %s' % str(exit_code))
+                
+        return exit_code
             
 if __name__=="__main__":
 
@@ -102,9 +168,9 @@ if __name__=="__main__":
 
     logging.basicConfig(format=('%(asctime)s %(message)s'), filename=logfile, level=logging.DEBUG)
                         
-    qi=sys.argv[1]
-    dev=sys.argv[2]
-    lib=sys.argv[3]
+    qi  = sys.argv[1]
+    dev = sys.argv[2]
+    lib = sys.argv[3]
 
     with ctbb_queue_item(qi,dev,lib) as queue_item:    
         exit_status=qi_status.SUCCESS
@@ -123,8 +189,10 @@ if __name__=="__main__":
             exit_status=queue_item.make_final_prm()
         
         # Launch reconstruction
-        if exit_status==qi_status.SUCCESS:        
+        if exit_status==qi_status.SUCCESS:
             exit_status=queue_item.dispatch_recon()
         
         # Clean up after ourselves
         queue_item.clean_up(exit_status)
+
+    shutil.copy(logfile,os.path.join(os.path.dirname(queue_item.prm_filepath),os.path.basename(logfile)))
