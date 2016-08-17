@@ -262,7 +262,41 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_5">
         <item>
-         <widget class="QListWidget" name="listWidget"/>
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>Active/Queue:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QListWidget" name="activeQueue_listWidget"/>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>Finished:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QListWidget" name="completed_listWidget"/>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_3">
+          <property name="text">
+           <string>Error:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QListWidget" name="error_listWidget">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>256</height>
+           </size>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -279,7 +313,7 @@
              <bool>true</bool>
             </property>
             <attribute name="horizontalHeaderVisible">
-             <bool>false</bool>
+             <bool>true</bool>
             </attribute>
             <attribute name="horizontalHeaderDefaultSectionSize">
              <number>200</number>

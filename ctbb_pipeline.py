@@ -6,7 +6,15 @@ from time import strftime
 from PyQt4 import QtGui, QtCore, uic
 
 from ctbb_pipeline_library import ctbb_pipeline_library as ctbb_plib
-from ctbb_pipeline_library import mutex 
+from ctbb_pipeline_library import mutex
+
+
+class update_thread(QtCore.QThread):
+    received = QtCore.pyqtSignal([str],[unicode]);
+    def run(self):
+        while True:
+            self.sleep(5)
+            self.received.emit('update')
 
 class MyWindow(QtGui.QMainWindow):
 
@@ -15,6 +23,7 @@ class MyWindow(QtGui.QMainWindow):
     current_library=None; # Path to currently loaded library
     test_cases=None;
     test_library=None;
+    update_thread=None;
 
     def __init__(self):
         logging.getLogger("PyQt4").setLevel(logging.WARNING)
@@ -31,10 +40,19 @@ class MyWindow(QtGui.QMainWindow):
         self.ui.queueNormal_pushButton.clicked.connect(self.queue_normal_callback);
         self.ui.queueHighPriority_pushButton.clicked.connect(self.queue_high_priority_callback);
 
+        # Dispatch update thread
+        self.update_thread=update_thread()
+        self.update_thread.received.connect(self.refresh_gui)
+        self.update_thread.start()
+
         logging.info('GUI Initialization finished')
 
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             self.run_tests();
+
+    def refresh_gui(self):
+        self.refresh_library_tab()
+        self.refresh_active_jobs_tab()
 
     def run_tests(self):
         logging.debug('Running in TESTING mode');        
@@ -139,6 +157,7 @@ class MyWindow(QtGui.QMainWindow):
         self.current_library=pipeline_lib
 
         self.refresh_library_tab()
+        self.refresh_active_jobs_tab()
 
     def queue_normal_callback(self):
         logging.info('Queue normal callback active')        
@@ -287,6 +306,37 @@ class MyWindow(QtGui.QMainWindow):
 
         table_model=MyTableModel(recon_list)
         self.ui.library_tableView.setModel(table_model)
+
+    def refresh_active_jobs_tab(self):
+        logging.info('Refreshing active jobs tab')
+        # Empty Contents
+        self.ui.activeQueue_listWidget.clear()
+        self.ui.completed_listWidget.clear()
+        self.ui.error_listWidget.clear()
+        
+        # Repopulate contents
+        proc_dir=os.path.join(self.current_library.path,'.proc')
+
+        with open(os.path.join(proc_dir,'queue'),'r') as f:
+            queue_list=f.read().splitlines()
+
+        with open(os.path.join(proc_dir,'done'),'r') as f:
+            done_list=f.read().splitlines()
+            
+        with open(os.path.join(proc_dir,'error'),'r') as f:
+            error_list=f.read().splitlines()
+
+        done_list.reverse()
+
+        if queue_list:
+            self.ui.activeQueue_listWidget.addItems(queue_list)
+
+        if done_list:
+            self.ui.completed_listWidget.addItems(done_list)
+
+        if error_list:
+            self.ui.error_listWidget.addItems(error_list)
+
 
 class MyTableModel(QtCore.QAbstractTableModel):
     header_labels=['File','Case ID','Dose','Kernel','Slice Thickness','Recon Path']
