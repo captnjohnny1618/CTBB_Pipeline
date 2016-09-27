@@ -8,7 +8,7 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 else
     mkdir -p $CTBB_PATH
-    cp ctbb_pipeline* $CTBB_PATH
+    cp src/ctbb_pipeline* $CTBB_PATH
 
     touch $INSTALL_DIR/ctbb_pipeline
     echo "#!/bin/bash" > $INSTALL_DIR/ctbb_pipeline
