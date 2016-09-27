@@ -30,6 +30,7 @@ class ctbb_queue_item:
     current_library = None
     device          = None
     device_mutex    = None
+    run_dir         = None
 
     def __init__(self,qi,device,library):
         self.qi_raw          = qi;
@@ -42,6 +43,7 @@ class ctbb_queue_item:
         self.slice_thickness = qi[3]
         self.current_library = ctbb_plib(library)
         self.device          = mutex(device,self.current_library.mutex_dir)
+        self.run_dir         = os.path.dirname(os.path.abspath(__file__))
 
         exit_status=qi_status.SUCCESS
 
@@ -158,18 +160,18 @@ class ctbb_queue_item:
             
 if __name__=="__main__":
 
-    logdir=os.path.join(os.path.dirname(os.path.abspath(__file__)),'log');
-    logfile=os.path.join(logdir,('%s_qi.log' % (strftime('%y%m%d_%H%M%S'))))
+    qi  = sys.argv[1]
+    dev = sys.argv[2]
+    lib = sys.argv[3]
+
+    logdir=os.path.join(lib,'log');
+    logfile=os.path.join(logdir,('%s_%s_qi.log' % (os.getpid(),strftime('%y%m%d_%H%M%S'))))
 
     if not os.path.isdir(logdir):
         os.mkdir(logdir);
 
     logging.basicConfig(format=('%(asctime)s %(message)s'), filename=logfile, level=logging.DEBUG)
                         
-    qi  = sys.argv[1]
-    dev = sys.argv[2]
-    lib = sys.argv[3]
-
     with ctbb_queue_item(qi,dev,lib) as queue_item:    
         exit_status=qi_status.SUCCESS
         

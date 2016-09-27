@@ -20,10 +20,12 @@ class ctbb_daemon:
     pipeline_lib = None
     devices      = []
     queue        = None
+    run_dir      = None
 
     def __init__(self,path):
         logging.info('CTBB Pipeline Daemon: launching')
         self.pipeline_lib=ctbb_plib(path)
+        self.run_dir = os.path.dirname(os.path.abspath(__file__))
         self.daemon_mutex=mutex('daemon',self.pipeline_lib.mutex_dir)
         self.queue_mutex=mutex('queue',self.pipeline_lib.mutex_dir)
         self.get_devices()
@@ -99,7 +101,7 @@ class ctbb_daemon:
 
     def process_queue_item(self,qi,dev):
         logging.debug('Current queue item is: %s for device %s' % (qi,dev.name))
-        call_command = ('python ctbb_queue_item.py %s %s %s' % (qi,dev.name,self.pipeline_lib.path))
+        call_command = ('python %s/ctbb_queue_item.py %s %s %s' % (self.run_dir,qi,dev.name,self.pipeline_lib.path))
         logging.debug('Sending to system call: %s' % call_command)
         self.__child_process__(call_command)
         
@@ -123,7 +125,12 @@ class ctbb_daemon:
 if __name__=="__main__":
     m=mutex('daemon',os.path.join(sys.argv[1],'.proc','mutex'))
 
-    logdir=os.path.join(os.path.dirname(os.path.abspath(__file__)),'log');
+    library_path=sys.argv[1]
+
+    #logdir=os.path.join(os.path.dirname(os.path.abspath(__file__)),'log');
+    logdir=os.path.join(library_path,'log');
+    if not os.path.isdir(logdir):
+        os.path.makedirs(logdir)
     logfile=os.path.join(logdir,('%s_daemon.log' % strftime('%y%m%d_%H%M%S')))
 
     if not os.path.isdir(logdir):
@@ -134,7 +141,7 @@ if __name__=="__main__":
     # If not running on current directory launch an instance of our daemon
     if not m.check_state():
         logging.info('No instance of CTBB Pipeline Daemon found for library')
-        with ctbb_daemon(sys.argv[1]) as ctbb_pd:
+        with ctbb_daemon(library_path) as ctbb_pd:
             ctbb_pd.run();
 
         shutil.copyfile(logfile,os.path.join(ctbb_pd.pipeline_lib.path))
