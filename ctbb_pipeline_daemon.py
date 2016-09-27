@@ -3,6 +3,7 @@ import os
 import logging
 import time
 from time import strftime
+import shutil
 
 import csv
 
@@ -135,6 +136,8 @@ if __name__=="__main__":
         logging.info('No instance of CTBB Pipeline Daemon found for library')
         with ctbb_daemon(sys.argv[1]) as ctbb_pd:
             ctbb_pd.run();
+
+        shutil.copyfile(logfile,os.path.join(ctbb_pd.pipeline_lib.path))
 
     # If instance already running on current dir, exit    
     else:

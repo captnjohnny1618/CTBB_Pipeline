@@ -1,9 +1,12 @@
+#!/usr/bin/env python
+
 import sys
 import os
 import logging
 from subprocess import call
 from time import strftime
 from PyQt4 import QtGui, QtCore, uic
+import shutil
 
 from ctbb_pipeline_library import ctbb_pipeline_library as ctbb_plib
 from ctbb_pipeline_library import mutex
@@ -41,9 +44,9 @@ class MyWindow(QtGui.QMainWindow):
         self.ui.queueHighPriority_pushButton.clicked.connect(self.queue_high_priority_callback);
 
         # Dispatch update thread
-        self.update_thread=update_thread()
-        self.update_thread.received.connect(self.refresh_gui)
-        self.update_thread.start()
+        #self.update_thread=update_thread()
+        #self.update_thread.received.connect(self.refresh_gui)
+        #self.update_thread.start()
 
         logging.info('GUI Initialization finished')
 
@@ -51,8 +54,9 @@ class MyWindow(QtGui.QMainWindow):
             self.run_tests();
 
     def refresh_gui(self):
-        self.refresh_library_tab()
-        self.refresh_active_jobs_tab()
+        print('Refreshing temporarily disabled')
+        #self.refresh_library_tab()
+        #self.refresh_active_jobs_tab()
 
     def run_tests(self):
         logging.debug('Running in TESTING mode');        
@@ -156,8 +160,9 @@ class MyWindow(QtGui.QMainWindow):
         self.ui.selectLibrary_edit.setText(dirname)
         self.current_library=pipeline_lib
 
-        self.refresh_library_tab()
-        self.refresh_active_jobs_tab()
+        print('Refresh currently disabled')
+        #self.refresh_library_tab()
+        #self.refresh_active_jobs_tab()
 
     def queue_normal_callback(self):
         logging.info('Queue normal callback active')        
@@ -407,4 +412,7 @@ if __name__ == '__main__':
         logging.basicConfig(format=('%(asctime)s %(message)s'),filename=logfile, level=logging.INFO)
 
     window = MyWindow()
-    sys.exit(app.exec_())
+
+    status=app.exec_()
+    shutil.copyfile(logfile,os.path.join(window.current_library.path))
+    sys.exit(status)
