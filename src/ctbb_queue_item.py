@@ -7,8 +7,10 @@ import tempfile
 from hashlib import md5
 from time import strftime
 
+import traceback
+
 from ctbb_pipeline_library import ctbb_pipeline_library as ctbb_plib
-from ctbb_pipeline_library import mutex
+from pypeline import mutex
 
 from enum import Enum
 
@@ -160,39 +162,46 @@ class ctbb_queue_item:
             
 if __name__=="__main__":
 
-    qi  = sys.argv[1]
-    dev = sys.argv[2]
-    lib = sys.argv[3]
+    try:
 
-    logdir=os.path.join(lib,'log');
-    logfile=os.path.join(logdir,('%s_%s_qi.log' % (os.getpid(),strftime('%y%m%d_%H%M%S'))))
+        qi  = sys.argv[1]
+        dev = sys.argv[2]
+        lib = sys.argv[3]
+    
+        logdir=os.path.join(lib,'log');
+        logfile=os.path.join(logdir,('%s_%s_qi.log' % (os.getpid(),strftime('%y%m%d_%H%M%S'))))
+    
+        if not os.path.isdir(logdir):
+            os.mkdir(logdir);
+    
+        logging.basicConfig(format=('%(asctime)s %(message)s'), filename=logfile, level=logging.DEBUG)
+                            
+        with ctbb_queue_item(qi,dev,lib) as queue_item:    
+            exit_status=qi_status.SUCCESS
+            
+            # Check for (and acquire if needed) 100% raw data
+            if exit_status==qi_status.SUCCESS:
+                exit_status=queue_item.get_raw_data()
+            
+            # If doing reduced dose, check for (and simulate if needed) reduced-dose data
+            if exit_status==qi_status.SUCCESS:    
+                if str(queue_item.dose) != '100':        
+                    exit_status=queue_item.simulate_reduced_dose()
+            
+            # Assemble final parameter file
+            if exit_status==qi_status.SUCCESS:        
+                exit_status=queue_item.make_final_prm()
+            
+            # Launch reconstruction
+            if exit_status==qi_status.SUCCESS:
+                exit_status=queue_item.dispatch_recon()
+            
+            # Clean up after ourselves
+            queue_item.clean_up(exit_status)
+    
+        shutil.copy(logfile,os.path.join(os.path.dirname(queue_item.prm_filepath),os.path.basename(logfile)))
 
-    if not os.path.isdir(logdir):
-        os.mkdir(logdir);
-
-    logging.basicConfig(format=('%(asctime)s %(message)s'), filename=logfile, level=logging.DEBUG)
-                        
-    with ctbb_queue_item(qi,dev,lib) as queue_item:    
-        exit_status=qi_status.SUCCESS
-        
-        # Check for (and acquire if needed) 100% raw data
-        if exit_status==qi_status.SUCCESS:
-            exit_status=queue_item.get_raw_data()
-        
-        # If doing reduced dose, check for (and simulate if needed) reduced-dose data
-        if exit_status==qi_status.SUCCESS:    
-            if str(queue_item.dose) != '100':        
-                exit_status=queue_item.simulate_reduced_dose()
-        
-        # Assemble final parameter file
-        if exit_status==qi_status.SUCCESS:        
-            exit_status=queue_item.make_final_prm()
-        
-        # Launch reconstruction
-        if exit_status==qi_status.SUCCESS:
-            exit_status=queue_item.dispatch_recon()
-        
-        # Clean up after ourselves
-        queue_item.clean_up(exit_status)
-
-    shutil.copy(logfile,os.path.join(os.path.dirname(queue_item.prm_filepath),os.path.basename(logfile)))
+    except NameError:
+        exc_type, exc_value, exc_traceback = sys.exc_info()     
+        lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+        logging.info(''.join('ERROR TRACEBACK: ' + line for line in lines))

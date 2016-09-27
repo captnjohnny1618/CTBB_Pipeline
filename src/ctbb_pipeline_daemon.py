@@ -6,6 +6,7 @@ from time import strftime
 import shutil
 
 import csv
+import traceback
 
 from ctbb_pipeline_library import ctbb_pipeline_library as ctbb_plib
 from ctbb_pipeline_library import mutex
@@ -123,28 +124,34 @@ class ctbb_daemon:
         logging.info('CTBB Pipeline Daemon: Starting next queue item')
         
 if __name__=="__main__":
-    m=mutex('daemon',os.path.join(sys.argv[1],'.proc','mutex'))
+    try:
+        m=mutex('daemon',os.path.join(sys.argv[1],'.proc','mutex'))
+    
+        library_path=sys.argv[1]
+    
+        #logdir=os.path.join(os.path.dirname(os.path.abspath(__file__)),'log');
+        logdir=os.path.join(library_path,'log');
+        logfile=os.path.join(logdir,('%s_daemon.log' % strftime('%y%m%d_%H%M%S')))
+    
+        logging.basicConfig(format=('%(asctime)s %(message)s'),filename=logfile, level=logging.DEBUG)
+    
+        # If not running on current directory launch an instance of our daemon
+        if not m.check_state():
+            logging.info('No instance of CTBB Pipeline Daemon found for library')
+            with ctbb_daemon(library_path) as ctbb_pd:
+                ctbb_pd.run();
+    
+            shutil.copyfile(logfile,os.path.join(ctbb_pd.pipeline_lib.path))
+    
+        # If instance already running on current dir, exit    
+        else:
+            logging.info('Instance of CTBB Pipeline Daemon already running.')
+            # Clean up unneeded logfile if we're not debugging
+            #if logging.getLogger().getEffectiveLevel() != logging.DEBUG:
+            #    os.remove(logfile);
+            sys.exit()
 
-    library_path=sys.argv[1]
-
-    #logdir=os.path.join(os.path.dirname(os.path.abspath(__file__)),'log');
-    logdir=os.path.join(library_path,'log');
-    logfile=os.path.join(logdir,('%s_daemon.log' % strftime('%y%m%d_%H%M%S')))
-
-    logging.basicConfig(format=('%(asctime)s %(message)s'),filename=logfile, level=logging.DEBUG)
-
-    # If not running on current directory launch an instance of our daemon
-    if not m.check_state():
-        logging.info('No instance of CTBB Pipeline Daemon found for library')
-        with ctbb_daemon(library_path) as ctbb_pd:
-            ctbb_pd.run();
-
-        shutil.copyfile(logfile,os.path.join(ctbb_pd.pipeline_lib.path))
-
-    # If instance already running on current dir, exit    
-    else:
-        logging.info('Instance of CTBB Pipeline Daemon already running.')
-        # Clean up unneeded logfile if we're not debugging
-        #if logging.getLogger().getEffectiveLevel() != logging.DEBUG:
-        #    os.remove(logfile);
-        sys.exit()
+    except NameError:
+        exc_type, exc_value, exc_traceback = sys.exc_info()     
+        lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+        logging.info(''.join('ERROR TRACEBACK: ' + line for line in lines))
