@@ -68,9 +68,11 @@ class ctbb_pipeline_library:
         touch(os.path.join(self.path,'README.txt'))
         os.mkdir(os.path.join(self.path,'raw'))
         os.mkdir(os.path.join(self.path,'recon'))
+        os.mkdir(os.path.join(self.path,'log'))
         os.mkdir(os.path.join(self.path,'.proc'))
-        os.mkdir(os.path.join(self.path,'.proc','mutex'))        
+        os.mkdir(os.path.join(self.path,'.proc','mutex'))
         touch(os.path.join(self.path,'.proc','queue'))
+        touch(os.path.join(self.path,'.proc','active'))        
         touch(os.path.join(self.path,'.proc','done'))
         touch(os.path.join(self.path,'.proc','error'))
         
@@ -91,12 +93,14 @@ class ctbb_pipeline_library:
         tf = tf and os.path.exists(os.path.join(self.path,'README.txt'))
         tf = tf and os.path.isdir(os.path.join(self.path,'raw'))
         tf = tf and os.path.isdir(os.path.join(self.path,'recon'))
+        tf = tf and os.path.isdir(os.path.join(self.path,'log'))        
         tf = tf and os.path.isdir(os.path.join(self.path,'.proc'))
         tf = tf and os.path.isdir(os.path.join(self.path,'.proc','mutex'))        
         tf = tf and os.path.exists(os.path.join(self.path,'.proc','queue'))
+        tf = tf and os.path.exists(os.path.join(self.path,'.proc','active'))        
         tf = tf and os.path.exists(os.path.join(self.path,'.proc','done'))
         tf = tf and os.path.exists(os.path.join(self.path,'.proc','error'))
-                                  
+
         return tf;
 
     def load(self):
@@ -115,12 +119,15 @@ class ctbb_pipeline_library:
             os.mkdir(os.path.join(self.path,'raw'))
         if not os.path.isdir(os.path.join(self.path,'recon')):            
             os.mkdir(os.path.join(self.path,'recon'))
+        if not os.path.isdir(os.path.join(self.path,'recon')):            
+            os.mkdir(os.path.join(self.path,'log'))            
         if not os.path.isdir(os.path.join(self.path,'.proc')):            
             os.mkdir(os.path.join(self.path,'.proc'))
         if not os.path.isdir(os.path.join(self.path,'.proc','mutex')):            
             os.mkdir(os.path.join(self.path,'.proc','mutex'))
             
         touch(os.path.join(self.path,'.proc','queue'))
+        touch(os.path.join(self.path,'.proc','active'))        
         touch(os.path.join(self.path,'.proc','done'))
         touch(os.path.join(self.path,'.proc','error'))
 

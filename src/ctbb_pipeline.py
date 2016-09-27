@@ -8,9 +8,10 @@ from time import strftime
 from PyQt4 import QtGui, QtCore, uic
 import shutil
 
+import tempfile
+
 from ctbb_pipeline_library import ctbb_pipeline_library as ctbb_plib
 from ctbb_pipeline_library import mutex
-
 
 class update_thread(QtCore.QThread):
     received = QtCore.pyqtSignal([str],[unicode]);
@@ -27,6 +28,7 @@ class MyWindow(QtGui.QMainWindow):
     test_cases=None;
     test_library=None;
     update_thread=None;
+    run_dir=None;
 
     def __init__(self):
         logging.getLogger("PyQt4").setLevel(logging.WARNING)
@@ -34,7 +36,8 @@ class MyWindow(QtGui.QMainWindow):
         logging.info('GUI Initialization initiated')
         
         super(MyWindow,self).__init__()
-        self.ui=uic.loadUi('ctbb_pipeline.ui',self)
+        self.run_dir=os.path.dirname(os.path.abspath(__file__))
+        self.ui=uic.loadUi(os.path.join(self.run_dir,'ctbb_pipeline.ui'),self)
         self.show()
 
         # Connect Callbacks
@@ -180,7 +183,7 @@ class MyWindow(QtGui.QMainWindow):
 
     def dispatch_ctbb_pipeline_daemon(self):
         logging.info('Launching pipeline daemon')
-        command="python ctbb_pipeline_daemon.py %s" % self.current_library.path
+        command="python %s/ctbb_pipeline_daemon.py %s" % (self.run_dir,self.current_library.path)
         os.system("nohup %s >/dev/null 2>&1 &" % command);
 
     def keyPressEvent(self,e):
@@ -403,7 +406,9 @@ if __name__ == '__main__':
     if (len(sys.argv)>1) and (sys.argv[1]=='--debug'):
         logging.basicConfig(format=('%(asctime)s %(message)s'), level=logging.DEBUG)
     else:
-        logdir=os.path.join(os.path.dirname(os.path.abspath(__file__)),'log');
+        
+        logdir=tempfile.gettempdir()        
+        #logdir=os.path.join(os.path.dirname(os.path.abspath(__file__)),'log');
         logfile=os.path.join(logdir,('%s_interface.log' % strftime('%y%m%d_%H%M%S')))
 
         if not os.path.isdir(logdir):
@@ -414,5 +419,8 @@ if __name__ == '__main__':
     window = MyWindow()
 
     status=app.exec_()
-    shutil.copyfile(logfile,os.path.join(window.current_library.path))
+    if window.current_library:
+        if not os.path.isdir(os.path.join(window.current_library.path,'log')):
+            os.mkdir(os.path.join(window.current_library.path,'log'))                             
+        shutil.copyfile(logfile,os.path.join(window.current_library.path,'log',os.path.basename(logfile)))
     sys.exit(status)

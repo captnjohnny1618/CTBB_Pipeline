@@ -8,10 +8,11 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 else
     mkdir -p $CTBB_PATH
-    cp ctbb_pipeline* $CTBB_PATH
+    cp src/* $CTBB_PATH
 
     touch $INSTALL_DIR/ctbb_pipeline
     echo "#!/bin/bash" > $INSTALL_DIR/ctbb_pipeline
+    echo "export PATH=$CTBB_PATH:$PATH" >> $INSTALL_DIR/ctbb_pipeline 
     echo "$CTBB_PATH/ctbb_pipeline.py" >> $INSTALL_DIR/ctbb_pipeline
     chmod +x /usr/bin/ctbb_pipeline  
 fi
