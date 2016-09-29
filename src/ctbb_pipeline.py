@@ -8,6 +8,7 @@ from time import strftime
 from PyQt4 import QtGui, QtCore, uic
 import shutil
 
+import yaml
 import tempfile
 
 from ctbb_pipeline_library import ctbb_pipeline_library as ctbb_plib
@@ -379,6 +380,21 @@ class MyTableModel(QtCore.QAbstractTableModel):
         if order == QtCore.Qt.DescendingOrder:
             self.arraydata.reverse()
         self.emit(QtCore.SIGNAL("layoutChanged()"))
+
+def load_config(filepath):
+    # Load pipeline run from YAML configuration file 
+    with open(sys.argv[1],'r') as f:
+        yml_string=f.read();
+
+    config_dict=yaml.load(yml_string)
+
+    # We only require that a case list and output library be defined
+    if ('case_list' not in config_dict.keys()) or ('library' not in config_dict.keys()):
+        
+    
+
+    
+    
         
 def get_base_parameter_files(file_list):    
     logging.info('Generating parameter files and reading into pipeline');
@@ -404,11 +420,13 @@ if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
 
     if (len(sys.argv)>1) and (sys.argv[1]=='--debug'):
+        # Debug testing (dumps logging info to shell)
         logging.basicConfig(format=('%(asctime)s %(message)s'), level=logging.DEBUG)
+    elif (len(sys.argv)>1) and (os.path.exists(sys.argv[1])):
+
     else:
         
-        logdir=tempfile.gettempdir()        
-        #logdir=os.path.join(os.path.dirname(os.path.abspath(__file__)),'log');
+        logdir=tempfile.gettempdir()
         logfile=os.path.join(logdir,('%s_interface.log' % strftime('%y%m%d_%H%M%S')))
 
         if not os.path.isdir(logdir):
