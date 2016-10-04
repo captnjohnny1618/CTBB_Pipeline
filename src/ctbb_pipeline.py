@@ -391,12 +391,7 @@ def load_config(filepath):
     # We only require that a case list and output library be defined
     if ('case_list' not in config_dict.keys()) or ('library' not in config_dict.keys()):
         
-    
-
-    
-    
-        
-def get_base_parameter_files(file_list):    
+def get_base_parameter_files(file_list):
     logging.info('Generating parameter files and reading into pipeline');
 
     prmbs=[];

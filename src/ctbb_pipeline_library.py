@@ -10,36 +10,6 @@ from glob import glob
 import random
 import tempfile
 from hashlib import md5
-
-class mutex:
-    name=None;
-    mutex_dir=None;
-    mutex_file=None;
-    
-    def __init__(self,name,mutex_dir):
-        self.name=name
-        self.mutex_dir=mutex_dir;
-        self.mutex_file=os.path.join(mutex_dir,name);
-        
-    def lock(self):
-        # If mutex alread locked, wait for other process to unlock
-        while os.path.exists(self.mutex_file):
-            logging.debug('Mutex ' + self.name  + ' locked. Sleeping and trying again')
-            time.sleep(5)
-        touch(self.mutex_file)            
-
-    def unlock(self):
-        os.remove(self.mutex_file);
-
-    def check_state(self):
-        state=os.path.exists(self.mutex_file)
-
-        if state==True:
-            logging.debug('Mutex file: %s LOCKED' % str(self.mutex_file))
-        else:
-            logging.debug('Mutex file: %s UNLOCKED' % str(self.mutex_file))
-
-        return state
             
 class ctbb_pipeline_library:
     path=None;
