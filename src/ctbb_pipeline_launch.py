@@ -128,7 +128,7 @@ if __name__=='__main__':
 
             # Flush PRMBs to pipeline library
             for i in range(len(case_list.prmbs_raw)):
-                output_file_name=os.path.basename(case_list.case_list[i-1])+'.prmb'
+                output_file_name=os.path.basename(case_list.case_list[i])+'.prmb'
                 output_dir_name=os.path.join(library.path,'raw')
                 output_fullpath=os.path.join(output_dir_name,output_file_name);
 
