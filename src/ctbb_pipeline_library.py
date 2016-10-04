@@ -10,6 +10,9 @@ from glob import glob
 import random
 import tempfile
 from hashlib import md5
+
+import pypeline as pype
+from pypeline import mutex
             
 class ctbb_pipeline_library:
     path=None;

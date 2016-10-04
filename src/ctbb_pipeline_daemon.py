@@ -129,12 +129,7 @@ if __name__=="__main__":
 
     #logdir=os.path.join(os.path.dirname(os.path.abspath(__file__)),'log');
     logdir=os.path.join(library_path,'log');
-    if not os.path.isdir(logdir):
-        os.path.makedirs(logdir)
     logfile=os.path.join(logdir,('%s_daemon.log' % strftime('%y%m%d_%H%M%S')))
-
-    if not os.path.isdir(logdir):
-        os.mkdir(logdir);
 
     logging.basicConfig(format=('%(asctime)s %(message)s'),filename=logfile, level=logging.DEBUG)
 

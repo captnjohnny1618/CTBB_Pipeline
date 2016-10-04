@@ -8,6 +8,10 @@ import yaml
 
 from subprocess import call
 
+def touch(path):
+    with open(path,'a'):
+        os.utime(path,None);
+
 class mutex:
     name=None;
     mutex_dir=None;
