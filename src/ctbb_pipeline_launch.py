@@ -6,51 +6,11 @@ import logging
 
 from ctbb_pipeline_library import ctbb_pipeline_library as ctbb_plib
 import pypeline as pype
-from pypeline import mutex
+from pypeline import mutex,load_config
 
 def usage():
     logging.info('usage: ctbb_pipeline_launch.py /path/to/config/file.yaml')
     logging.info('    Copyright (c) John Hoffman 2016')
-
-def load_config(filepath):
-
-    logging.info('Loading configuration file: %s' % filepath)
-
-    # Load pipeline run from YAML configuration file 
-    with open(sys.argv[1],'r') as f:
-        yml_string=f.read();
-
-    config_dict=yaml.load(yml_string)
-
-    # We only require that a case list and output library be defined
-    if ('case_list' not in config_dict.keys()) or ('library' not in config_dict.keys()):
-        logging.error('"case_list" and "library" are required fields in ctbb_pipeline configuration file and one or the other was not found. Exiting."')
-        config_dict={}
-
-    else:
-        # Check for optional fields. Set to defaults as needed.
-        # Doses
-        if ('doses' not in config_dict.keys()):
-            config_dict['doses']=[100,10]
-        
-        # Slice Thickness
-        if ('slice_thickness' not in config_dict.keys()):
-            config_dict['slice_thickness']=[0.6,5.0]
-
-        # Kernel
-        if ('kernels' not in config_dict.keys()):
-            config_dict['kernels']=[1,3]
-
-        if not os.path.isdir(config_dict['library']):
-            os.makedirs(config_dict['library'])
-            logging.warning('Library directory does not exist, creating.')
-            
-        # Verify that the case list and library directory exist
-        if not os.path.exists(config_dict['case_list']):
-            logging.error('Specified case_list does not exist. Exiting.')
-            config_dict={}
-            
-    return config_dict
 
 def flush_jobs_to_queue(config,case_list,library):
     # inputs are:
