@@ -17,7 +17,7 @@ def load_config(filepath):
     logging.info('Loading configuration file: %s' % filepath)
 
     # Load pipeline run from YAML configuration file 
-    with open(sys.argv[1],'r') as f:
+    with open(filepath,'r') as f:
         yml_string=f.read();
 
     config_dict=yaml.load(yml_string)

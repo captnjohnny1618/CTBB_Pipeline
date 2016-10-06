@@ -49,6 +49,9 @@ class MyWindow(QtGui.QMainWindow):
         self.ui.queueNormal_pushButton.clicked.connect(self.queue_normal_callback);
         self.ui.queueHighPriority_pushButton.clicked.connect(self.queue_high_priority_callback);
 
+        self.ui.actionSaveStudy.triggered.connect(self.save_config_file);
+        self.ui.actionOpenStudy.triggered.connect(self.open_config_file);
+
         # Dispatch update thread
         #self.update_thread=update_thread()
         #self.update_thread.received.connect(self.refresh_gui)
@@ -215,6 +218,20 @@ class MyWindow(QtGui.QMainWindow):
 
     def save_config_file(self):
         fname=QtGui.QFileDialog.getSaveFileName(self,'Open file','/home')
+        if not fname:
+            return
+        else:
+            ds,sts,ks=self.gather_run_parameters()
+            config_file=self.generate_config_file(ds,sts,ks)
+            shutil.copy(config_file.name,fname)
+
+    def open_config_file(self):
+        fname=QtGui.QFileDialog.getOpenFileName(self,'Open file','/home')
+        if not fname:
+            return
+        else:
+            config_dict=load_config(fname)
+            self.set_gui_from_config(config_dict)
 
     def generate_config_file(self,doses,slice_thicknesses,kernels):
         f=tempfile.NamedTemporaryFile()
