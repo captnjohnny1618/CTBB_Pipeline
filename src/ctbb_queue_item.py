@@ -176,29 +176,40 @@ if __name__=="__main__":
     
         logging.basicConfig(format=('%(asctime)s %(message)s'), filename=logfile, level=logging.DEBUG)
                             
-        with ctbb_queue_item(qi,dev,lib) as queue_item:    
+        with ctbb_queue_item(qi,dev,lib) as queue_item:
+            logging.info('START: QUEUE ITEM')
+            
             exit_status=qi_status.SUCCESS
             
             # Check for (and acquire if needed) 100% raw data
+            logging.info('START: FETCH RAW')
             if exit_status==qi_status.SUCCESS:
                 exit_status=queue_item.get_raw_data()
-            
+            logging.info('END: FETCH RAW')
+                
             # If doing reduced dose, check for (and simulate if needed) reduced-dose data
+            logging.info('START: DOSE REDUCTION')
             if exit_status==qi_status.SUCCESS:    
                 if str(queue_item.dose) != '100':        
                     exit_status=queue_item.simulate_reduced_dose()
-            
+            logging.info('END: DOSE REDUCTION')
+                    
             # Assemble final parameter file
             if exit_status==qi_status.SUCCESS:        
                 exit_status=queue_item.make_final_prm()
             
             # Launch reconstruction
+            logging.info('START: RECON')
             if exit_status==qi_status.SUCCESS:
                 exit_status=queue_item.dispatch_recon()
+            logging.info('END: RECON')
             
             # Clean up after ourselves
             queue_item.clean_up(exit_status)
-    
+
+            logging.info('END: QUEUE ITEM')
+            logging.info('FINAL STATUS: %d',exit_status)
+            
         shutil.copy(logfile,os.path.join(os.path.dirname(queue_item.prm_filepath),os.path.basename(logfile)))
 
     except NameError:
