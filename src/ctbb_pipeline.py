@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import sys
 import os
 import logging
@@ -10,6 +9,7 @@ import shutil
 
 import yaml
 import tempfile
+import traceback
 
 from ctbb_pipeline_library import ctbb_pipeline_library as ctbb_plib
 from ctbb_pipeline_library import mutex
@@ -35,31 +35,31 @@ class MyWindow(QtGui.QMainWindow):
 
     def __init__(self,config_dict={}):
         logging.getLogger("PyQt4").setLevel(logging.WARNING)
-
+        
         logging.info('GUI Initialization initiated')
         
         super(MyWindow,self).__init__()
         self.run_dir=os.path.dirname(os.path.abspath(__file__))
         self.ui=uic.loadUi(os.path.join(self.run_dir,'ctbb_pipeline.ui'),self)
         self.show()
-
+        
         # Connect Callbacks
         self.ui.selectCases_pushButton.clicked.connect(self.select_cases_callback)
         self.ui.selectLibrary_pushButton.clicked.connect(self.select_library_callback);
         self.ui.queueNormal_pushButton.clicked.connect(self.queue_normal_callback);
         self.ui.queueHighPriority_pushButton.clicked.connect(self.queue_high_priority_callback);
-
+        
         self.ui.actionSaveStudy.triggered.connect(self.save_config_file_callback);
         self.ui.actionOpenStudy.triggered.connect(self.open_config_file_callback);
         self.ui.actionExit.triggered.connect(self.close_application_callback);
-
+        
         # Dispatch update thread
         #self.update_thread=update_thread()
         #self.update_thread.received.connect(self.refresh_gui)
         #self.update_thread.start()
-
+        
         logging.info('GUI Initialization finished')
-
+        
         if config_dict:
             self.set_gui_from_config(config_dict)
 
@@ -123,94 +123,118 @@ class MyWindow(QtGui.QMainWindow):
         print('Test worked!');
 
     def select_cases_callback(self,config_dict={}):
-        logging.info('Select cases callback active')
-        
-        accepted_filetypes=['.ctd','.ptr','.ima','.txt']
-
-        # File selection dialog
-        if not config_dict:
-            fname=QtGui.QFileDialog.getOpenFileName(self,'Open file','/home');
-        else:
-            fname=config_dict['case_list']
-
-        # Return if user cancelled
-        if not fname:
-            return;
-        else:
-            fname=str(fname)
-
-        # Get file type and open accordingly
-        ext=os.path.splitext(fname)
-        ext=ext[1].lower();
-
-        logging.info('Detected file extension: ' + ext)
-
-        case_list=[];
-        
-        if (ext in accepted_filetypes):
-            logging.info('File extension accepted')
+        try:
+            logging.info('Select cases callback active')
             
-            if ext == '.txt':
-                self.current_case_list_path=fname
-                with open(fname,'r') as f:
-                    case_list=f.read().splitlines()
+            accepted_filetypes=['.ctd','.ptr','.ima','.txt']
+            
+            # File selection dialog
+            if not config_dict:
+                fname=QtGui.QFileDialog.getOpenFileName(self,'Open file','/home');
             else:
-                case_list.append(fname)
-        else:
-            self.error_dialog('Unrecognized filetype.  Accepted filetypes are IMA, PTR, CTD, and TXT')
-            logging.error('User tried to load an unrecognized filetype:' + fname)
-            return;
-
-        # Set lineEdit string to file path
-        self.ui.selectCases_edit.setText(fname)
-
-        # If text file, load into memory and display in box
-        # Run ctbb_info to generate base parameter files
-        prmb_string=get_base_parameter_files(case_list)
-
-        for i in range(0,len(prmb_string)):
-            self.ui.PRMEditor_textEdit.insertPlainText('#####! DO NOT EDIT THIS LINE !#####\n');
-            self.ui.PRMEditor_textEdit.insertPlainText('%%% Edit below for file: ' + case_list[i] + ' %%%\n\n');
-            self.ui.PRMEditor_textEdit.insertPlainText(prmb_string[i]);
-            self.ui.PRMEditor_textEdit.insertPlainText('\n\n');
-
-        self.current_cases=case_list;
+                fname=config_dict['case_list']
+            
+            # Return if user cancelled
+            if not fname:
+                return;
+            else:
+                fname=str(fname)
+            
+            # Get file type and open accordingly
+            ext=os.path.splitext(fname)
+            ext=ext[1].lower();
+            
+            logging.info('Detected file extension: ' + ext)
+            
+            case_list=[];
+            
+            if (ext in accepted_filetypes):
+                logging.info('File extension accepted')
+                
+                if ext == '.txt':
+                    self.current_case_list_path=fname
+                    with open(fname,'r') as f:
+                        case_list=f.read().splitlines()
+                else:
+                    case_list.append(fname)
+            else:
+                self.error_dialog('Unrecognized filetype.  Accepted filetypes are IMA, PTR, CTD, and TXT')
+                logging.error('User tried to load an unrecognized filetype:' + fname)
+                return;
+            
+            # Set lineEdit string to file path
+            self.ui.selectCases_edit.setText(fname)
+            
+            # If text file, load into memory and display in box
+            # Run ctbb_info to generate base parameter files
+            prmb_string=get_base_parameter_files(case_list)
+            
+            for i in range(0,len(prmb_string)):
+                self.ui.PRMEditor_textEdit.insertPlainText('#####! DO NOT EDIT THIS LINE !#####\n');
+                self.ui.PRMEditor_textEdit.insertPlainText('%%% Edit below for file: ' + case_list[i] + ' %%%\n\n');
+                self.ui.PRMEditor_textEdit.insertPlainText(prmb_string[i]);
+                self.ui.PRMEditor_textEdit.insertPlainText('\n\n');
+            
+            self.current_cases=case_list;
+        except NameError:
+            exc_type, exc_value, exc_traceback = sys.exc_info()     
+            lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+            logging.info(''.join('ERROR TRACEBACK: ' + line for line in lines))
+            
             
     def select_library_callback(self,config_dict={}):
-        logging.info('Select library callback active')
-
-        if not config_dict:
-            dirname=QtGui.QFileDialog.getExistingDirectory(self,'Open Directory','/home');
-        else:
-            dirname=config_dict['library']
-
-        if not dirname:
-            return;
-        else:
-            dirname=str(dirname)
-
-        pipeline_lib=ctbb_plib(dirname)
+        try:
+            logging.info('Select library callback active')
             
-        self.ui.selectLibrary_edit.setText(dirname)
-        self.current_library=pipeline_lib
-
-        print('Refresh currently disabled')
-        #self.refresh_library_tab()
-        #self.refresh_active_jobs_tab()
+            if not config_dict:
+                dirname=QtGui.QFileDialog.getExistingDirectory(self,'Open Directory','/home');
+            else:
+                dirname=config_dict['library']
+            
+            if not dirname:
+                return;
+            else:
+                dirname=str(dirname)
+            
+            pipeline_lib=ctbb_plib(dirname)
+                
+            self.ui.selectLibrary_edit.setText(dirname)
+            self.current_library=pipeline_lib
+            
+            print('Refresh currently disabled')
+            #self.refresh_library_tab()
+            #self.refresh_active_jobs_tab()
+        except NameError:
+            exc_type, exc_value, exc_traceback = sys.exc_info()     
+            lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+            logging.info(''.join('ERROR TRACEBACK: ' + line for line in lines))
+        
 
     def queue_normal_callback(self):
-        logging.info('Queue normal callback active')        
-        self.flush_prmbs()
-        ds,sts,ks=self.gather_run_parameters()
-        config_file=self.generate_config_file(ds,sts,ks)
-        self.launch_pipeline(config_file)
+        try:
+            logging.info('Queue normal callback active')        
+            self.flush_prmbs()
+            ds,sts,ks=self.gather_run_parameters()
+            config_file=self.generate_config_file(ds,sts,ks)
+            self.launch_pipeline(config_file)
+        except NameError:
+            exc_type, exc_value, exc_traceback = sys.exc_info()     
+            lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+            logging.info(''.join('ERROR TRACEBACK: ' + line for line in lines))
+            
 
     def queue_high_priority_callback(self):
-        logging.info('Queue high priority callback active')
-        self.flush_prmbs()
-        ds,sts,ks=self.gather_run_parameters()
-        config_file=self.generate_config_file(ds,sts,ks)
-        self.launch_pipeline(config_file)
+        try:
+            logging.info('Queue high priority callback active')
+            self.flush_prmbs()
+            ds,sts,ks=self.gather_run_parameters()
+            config_file=self.generate_config_file(ds,sts,ks)
+            self.launch_pipeline(config_file)
+        except NameError:
+            exc_type, exc_value, exc_traceback = sys.exc_info()     
+            lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+            logging.info(''.join('ERROR TRACEBACK: ' + line for line in lines))
+            
 
     def keyPressEvent(self,e):
         if e.matches(QtGui.QKeySequence.Close) or e.matches(QtGui.QKeySequence.Quit):
@@ -218,24 +242,42 @@ class MyWindow(QtGui.QMainWindow):
             sys.exit()
 
     def close_application_callback(self):
-        sys.exit()
+        try:
+            sys.exit()
+        except NameError:
+            exc_type, exc_value, exc_traceback = sys.exc_info()     
+            lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+            logging.info(''.join('ERROR TRACEBACK: ' + line for line in lines))
+        
             
     def save_config_file_callback(self):
-        fname=QtGui.QFileDialog.getSaveFileName(self,'Open file','/home')
-        if not fname:
-            return
-        else:
-            ds,sts,ks=self.gather_run_parameters()
-            config_file=self.generate_config_file(ds,sts,ks)
-            shutil.copy(config_file.name,fname)
+        try:        
+            fname=QtGui.QFileDialog.getSaveFileName(self,'Open file','/home')
+            if not fname:
+                return
+            else:
+                ds,sts,ks=self.gather_run_parameters()
+                config_file=self.generate_config_file(ds,sts,ks)
+                shutil.copy(config_file.name,fname)
+        except NameError:
+            exc_type, exc_value, exc_traceback = sys.exc_info()     
+            lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+            logging.info(''.join('ERROR TRACEBACK: ' + line for line in lines))
+                
 
     def open_config_file_callback(self):
-        fname=QtGui.QFileDialog.getOpenFileName(self,'Open file','/home')
-        if not fname:
-            return
-        else:
-            config_dict=load_config(fname)
-            self.set_gui_from_config(config_dict)
+        try:
+            fname=QtGui.QFileDialog.getOpenFileName(self,'Open file','/home')
+            if not fname:
+                return
+            else:
+                config_dict=load_config(fname)
+                self.set_gui_from_config(config_dict)
+        except NameError:
+            exc_type, exc_value, exc_traceback = sys.exc_info()     
+            lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+            logging.info(''.join('ERROR TRACEBACK: ' + line for line in lines))
+                
 
     def generate_config_file(self,doses,slice_thicknesses,kernels):
         f=tempfile.NamedTemporaryFile()
@@ -433,29 +475,35 @@ def get_base_parameter_files(file_list):
     return prmbs
 
 if __name__ == '__main__':
-    app = QtGui.QApplication(sys.argv)
+    try:
+        app = QtGui.QApplication(sys.argv)
+        
+        config_dict={}
+    
+        if (len(sys.argv)>1) and (sys.argv[1]=='--debug'):
+            # Debug testing (dumps logging info to shell)
+            logging.basicConfig(format=('%(asctime)s %(message)s'), level=logging.DEBUG)
+        elif (len(sys.argv)>1) and os.path.exists(sys.argv[1]):
+            config_dict=load_config(sys.argv[1])        
+        else:        
+            logdir=tempfile.gettempdir()
+            logfile=os.path.join(logdir,('%s_interface.log' % strftime('%y%m%d_%H%M%S')))
+    
+            if not os.path.isdir(logdir):
+                os.mkdir(logdir);
+    
+            logging.basicConfig(format=('%(asctime)s %(message)s'),filename=logfile, level=logging.INFO)
+    
+        window = MyWindow(config_dict)
+    
+        status=app.exec_()
+        if window.current_library:
+            if not os.path.isdir(os.path.join(window.current_library.path,'log')):
+                os.mkdir(os.path.join(window.current_library.path,'log'))                             
+            shutil.copyfile(logfile,os.path.join(window.current_library.path,'log',os.path.basename(logfile)))
+        sys.exit(status)
 
-    config_dict={}
-
-    if (len(sys.argv)>1) and (sys.argv[1]=='--debug'):
-        # Debug testing (dumps logging info to shell)
-        logging.basicConfig(format=('%(asctime)s %(message)s'), level=logging.DEBUG)
-    elif (len(sys.argv)>1) and os.path.exists(sys.argv[1]):
-        config_dict=load_config(sys.argv[1])        
-    else:        
-        logdir=tempfile.gettempdir()
-        logfile=os.path.join(logdir,('%s_interface.log' % strftime('%y%m%d_%H%M%S')))
-
-        if not os.path.isdir(logdir):
-            os.mkdir(logdir);
-
-        logging.basicConfig(format=('%(asctime)s %(message)s'),filename=logfile, level=logging.INFO)
-
-    window = MyWindow(config_dict)
-
-    status=app.exec_()
-    if window.current_library:
-        if not os.path.isdir(os.path.join(window.current_library.path,'log')):
-            os.mkdir(os.path.join(window.current_library.path,'log'))                             
-        shutil.copyfile(logfile,os.path.join(window.current_library.path,'log',os.path.basename(logfile)))
-    sys.exit(status)
+    except NameError:
+        exc_type, exc_value, exc_traceback = sys.exc_info()     
+        lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+        logging.info(''.join('ERROR TRACEBACK: ' + line for line in lines))

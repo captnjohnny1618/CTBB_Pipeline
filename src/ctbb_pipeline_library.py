@@ -11,6 +11,8 @@ import random
 import tempfile
 from hashlib import md5
 
+import traceback
+
 import pypeline as pype
 from pypeline import mutex
             
@@ -25,14 +27,15 @@ class ctbb_pipeline_library:
         self.mutex_dir=os.path.join(path,'.proc','mutex');
         self.raw_dir=os.path.join(path,'raw');
         self.recon_dir=os.path.join(path,'recon');
-
+        
         if not self.is_library():
             self.initialize_new_library()
         else:
             if not self.is_valid():
                 self.repair()
+        
+            self.load()
 
-            self.load()                
         
     def initialize_new_library(self):
         touch(os.path.join(self.path,'.ctbb_pipeline_lib'))
@@ -92,7 +95,7 @@ class ctbb_pipeline_library:
             os.mkdir(os.path.join(self.path,'raw'))
         if not os.path.isdir(os.path.join(self.path,'recon')):            
             os.mkdir(os.path.join(self.path,'recon'))
-        if not os.path.isdir(os.path.join(self.path,'recon')):            
+        if not os.path.isdir(os.path.join(self.path,'log')):
             os.mkdir(os.path.join(self.path,'log'))            
         if not os.path.isdir(os.path.join(self.path,'.proc')):            
             os.mkdir(os.path.join(self.path,'.proc'))

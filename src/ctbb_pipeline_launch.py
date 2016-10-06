@@ -3,6 +3,7 @@ import os
 
 import yaml
 import logging
+import traceback
 
 from ctbb_pipeline_library import ctbb_pipeline_library as ctbb_plib
 import pypeline as pype
@@ -61,15 +62,18 @@ def flush_jobs_to_queue(config,case_list,library):
     m.unlock()
 
 if __name__=='__main__':
-    status = 0
 
+    status = 0
+    
+    # Conigure how to launch pipeline based on command line input
     run_dir=os.path.dirname(os.path.abspath(__file__))
     
     if (len(sys.argv) < 2):
         usage()
     else:
         filepath=sys.argv[1]
-                 
+
+    # Attempt to launch the pipeline
     if not os.path.exists(filepath):        
         logging.error('Configuration file not found! Exiting.')
         status=1
@@ -81,7 +85,7 @@ if __name__=='__main__':
 
             # Instantiate library in library directory
             library=ctbb_plib(config['library']);
-            
+
             # Get PRMBs from raw files
             case_list=pype.case_list(config['case_list'])
             case_list.get_prmbs()
@@ -110,3 +114,4 @@ if __name__=='__main__':
             status=1
 
     sys.exit(status)
+
