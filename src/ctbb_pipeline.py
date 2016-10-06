@@ -49,8 +49,9 @@ class MyWindow(QtGui.QMainWindow):
         self.ui.queueNormal_pushButton.clicked.connect(self.queue_normal_callback);
         self.ui.queueHighPriority_pushButton.clicked.connect(self.queue_high_priority_callback);
 
-        self.ui.actionSaveStudy.triggered.connect(self.save_config_file);
-        self.ui.actionOpenStudy.triggered.connect(self.open_config_file);
+        self.ui.actionSaveStudy.triggered.connect(self.save_config_file_callback);
+        self.ui.actionOpenStudy.triggered.connect(self.open_config_file_callback);
+        self.ui.actionExit.triggered.connect(self.close_application_callback);
 
         # Dispatch update thread
         #self.update_thread=update_thread()
@@ -216,7 +217,10 @@ class MyWindow(QtGui.QMainWindow):
             logging.info('User quit via keystroke')
             sys.exit()
 
-    def save_config_file(self):
+    def close_application_callback(self):
+        sys.exit()
+            
+    def save_config_file_callback(self):
         fname=QtGui.QFileDialog.getSaveFileName(self,'Open file','/home')
         if not fname:
             return
@@ -225,7 +229,7 @@ class MyWindow(QtGui.QMainWindow):
             config_file=self.generate_config_file(ds,sts,ks)
             shutil.copy(config_file.name,fname)
 
-    def open_config_file(self):
+    def open_config_file_callback(self):
         fname=QtGui.QFileDialog.getOpenFileName(self,'Open file','/home')
         if not fname:
             return
