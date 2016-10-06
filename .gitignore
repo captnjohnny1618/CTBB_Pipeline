@@ -2,3 +2,6 @@ log/
 *.pyc
 sample_case_list.txt
 TAGS
+*scratch.txt
+
+unit_tests/

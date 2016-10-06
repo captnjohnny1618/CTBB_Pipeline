@@ -13,6 +13,7 @@ import tempfile
 
 from ctbb_pipeline_library import ctbb_pipeline_library as ctbb_plib
 from ctbb_pipeline_library import mutex
+from pypeline import load_config
 
 class update_thread(QtCore.QThread):
     received = QtCore.pyqtSignal([str],[unicode]);
@@ -26,12 +27,13 @@ class MyWindow(QtGui.QMainWindow):
     ui=None;
     current_cases=None; # Python list of raw data filepaths
     current_library=None; # Path to currently loaded library
+    current_case_list_path=None;
     test_cases=None;
     test_library=None;
     update_thread=None;
     run_dir=None;
 
-    def __init__(self):
+    def __init__(self,config_dict={}):
         logging.getLogger("PyQt4").setLevel(logging.WARNING)
 
         logging.info('GUI Initialization initiated')
@@ -47,6 +49,10 @@ class MyWindow(QtGui.QMainWindow):
         self.ui.queueNormal_pushButton.clicked.connect(self.queue_normal_callback);
         self.ui.queueHighPriority_pushButton.clicked.connect(self.queue_high_priority_callback);
 
+        self.ui.actionSaveStudy.triggered.connect(self.save_config_file_callback);
+        self.ui.actionOpenStudy.triggered.connect(self.open_config_file_callback);
+        self.ui.actionExit.triggered.connect(self.close_application_callback);
+
         # Dispatch update thread
         #self.update_thread=update_thread()
         #self.update_thread.received.connect(self.refresh_gui)
@@ -54,55 +60,78 @@ class MyWindow(QtGui.QMainWindow):
 
         logging.info('GUI Initialization finished')
 
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-            self.run_tests();
+        if config_dict:
+            self.set_gui_from_config(config_dict)
 
     def refresh_gui(self):
         print('Refreshing temporarily disabled')
         #self.refresh_library_tab()
         #self.refresh_active_jobs_tab()
 
-    def run_tests(self):
-        logging.debug('Running in TESTING mode');        
-        self.test_cases = '/home/john/Code/CTBangBang_Pipeline/sample_case_list.txt';
-        self.test_library = '/home/john/Desktop/pipeline_test_dir/';
+    def set_gui_from_config(self,config_dict):
+        # Set case list and library
+        self.select_cases_callback(config_dict)
+        self.select_library_callback(config_dict)
 
-        logging.debug('Test case list: ' + self.test_cases)
-        logging.debug('Test library: ' + self.test_library)
+        # Set dose checkboxes
+        for d in config_dict['doses']:
+            if d==100:
+                self.ui.dose100_checkBox.setCheckState(True);
+            elif d==75:
+                self.ui.dose75_checkBox.setCheckState(True);                
+            elif d==50:
+                self.ui.dose50_checkBox.setCheckState(True);
+            elif d==25:
+                self.ui.dose25_checkBox.setCheckState(True);
+            elif d==10:
+                self.ui.dose10_checkBox.setCheckState(True);
+            elif d==5:
+                self.ui.dose5_checkBox.setCheckState(True);
+            else:
+                logging.info('Non-GUI dose requested. Ignoring.')
+                
+        # Set slice thickness checkboxes
+        print(config_dict)
+        for sts in config_dict['slice_thicknesses']:
+            if sts==0.6:
+                self.ui.sliceThickness0p6_checkBox.setCheckState(True);
+            elif sts==1.0:
+                self.ui.sliceThickness1_checkBox.setCheckState(True);
+            elif sts==1.5:
+                self.ui.sliceThickness1p5_checkBox.setCheckState(True);
+            elif sts==2.0:
+                self.ui.sliceThickness2_checkBox.setCheckState(True);
+            elif sts==3.0:
+                self.ui.sliceThickness3_checkBox.setCheckState(True);
+            elif sts==5.0:
+                self.ui.sliceThickness5_checkBox.setCheckState(True);
+            else:
+                logging.info("Non-GUI slice thickness requested. Ignoring.")
 
-        logging.debug('Running case load callback...')
-        self.select_cases_callback()
-        logging.debug('Running case load callback... DONE')
-
-        logging.debug('Running case load callback...')
-        self.select_library_callback()
-        logging.debug('Running case load callback... DONE')
-
-        logging.debug('Setting some checkboxes for testing...')
-        self.ui.dose100_checkBox.setCheckState(True);
-        self.ui.kernel3_checkBox.setCheckState(True);
-        self.ui.sliceThickness5_checkBox.setCheckState(True);                
-        logging.debug('Setting some checkboxes for testing... DONE')
-
-        logging.debug('Running queue NORMAL callback...');
-        self.queue_normal_callback();
-        logging.debug('Running queue NORMAL callback... DONE');
-        
-        logging.debug('Current level of testing completed!');
-        
+        # Set kernel checkboxes
+        for k in config_dict['kernels']:
+            if k==1:            
+                self.ui.kernel1_checkBox.setCheckState(True);
+            elif k==2:            
+                self.ui.kernel2_checkBox.setCheckState(True);
+            elif k==3:            
+                self.ui.kernel3_checkBox.setCheckState(True);
+            else:
+                logging.info('Non-GUI kernel requested. Ignoring.')
+                        
     def testCallback(self):
         print('Test worked!');
 
-    def select_cases_callback(self):
+    def select_cases_callback(self,config_dict={}):
         logging.info('Select cases callback active')
         
         accepted_filetypes=['.ctd','.ptr','.ima','.txt']
 
         # File selection dialog
-        if not self.test_cases:
+        if not config_dict:
             fname=QtGui.QFileDialog.getOpenFileName(self,'Open file','/home');
         else:
-            fname=self.test_cases
+            fname=config_dict['case_list']
 
         # Return if user cancelled
         if not fname:
@@ -122,6 +151,7 @@ class MyWindow(QtGui.QMainWindow):
             logging.info('File extension accepted')
             
             if ext == '.txt':
+                self.current_case_list_path=fname
                 with open(fname,'r') as f:
                     case_list=f.read().splitlines()
             else:
@@ -146,13 +176,13 @@ class MyWindow(QtGui.QMainWindow):
 
         self.current_cases=case_list;
             
-    def select_library_callback(self):
+    def select_library_callback(self,config_dict={}):
         logging.info('Select library callback active')
 
-        if not self.test_library:        
+        if not config_dict:
             dirname=QtGui.QFileDialog.getExistingDirectory(self,'Open Directory','/home');
         else:
-            dirname=self.test_library
+            dirname=config_dict['library']
 
         if not dirname:
             return;
@@ -172,70 +202,72 @@ class MyWindow(QtGui.QMainWindow):
         logging.info('Queue normal callback active')        
         self.flush_prmbs()
         ds,sts,ks=self.gather_run_parameters()
-        self.flush_jobs_to_queue('normal',ds,sts,ks);
-        self.dispatch_ctbb_pipeline_daemon()
+        config_file=self.generate_config_file(ds,sts,ks)
+        self.launch_pipeline(config_file)
 
     def queue_high_priority_callback(self):
         logging.info('Queue high priority callback active')
         self.flush_prmbs()
         ds,sts,ks=self.gather_run_parameters()
-        self.flush_jobs_to_queue('high',ds,sts,ks);
-        self.dispatch_ctbb_pipeline_daemon()
-
-    def dispatch_ctbb_pipeline_daemon(self):
-        logging.info('Launching pipeline daemon')
-        command="python %s/ctbb_pipeline_daemon.py %s" % (self.run_dir,self.current_library.path)
-        os.system("nohup %s >/dev/null 2>&1 &" % command);
+        config_file=self.generate_config_file(ds,sts,ks)
+        self.launch_pipeline(config_file)
 
     def keyPressEvent(self,e):
         if e.matches(QtGui.QKeySequence.Close) or e.matches(QtGui.QKeySequence.Quit):
             logging.info('User quit via keystroke')
             sys.exit()
 
-    def flush_jobs_to_queue(self,priority,ds,sts,ks):
-        logging.info('Sending jobs to queue')
-
-        queue_strings=[]
-        
-        m=mutex('queue',self.current_library.mutex_dir)
-        m.lock()
-
-        # Form the strings to be written
-        for c in self.current_cases:
-            if not c:
-                continue
-            for dose in ds:
-                for st in sts:
-                    for kernel in ks:
-                        queue_strings.append(('%s,%s,%s,%s\n') % (c,dose,kernel,st));
-
-
-        queue_file=os.path.join(self.current_library.path,'.proc','queue')
-        
-        # If priority "normal" write to end of file
-        if priority == 'normal':
-            with open(queue_file,'a') as f:
-                for q_string in queue_strings:
-                    f.write(q_string)
-
-        # If priority "high" write to beginning of file
-        # Read queue into memory
-        elif priority == 'high':
-            with open(queue_file,'r') as f:
-                existing_queue=f.read()
+    def close_application_callback(self):
+        sys.exit()
             
-            # Pop new items into beginning of queue and then write rest of queue back
-            with open(queue_file,'w') as f:
-                for q_string in queue_strings:
-                    f.write(q_string)
-                f.write(existing_queue)
-
-        # Handle any weirdness
+    def save_config_file_callback(self):
+        fname=QtGui.QFileDialog.getSaveFileName(self,'Open file','/home')
+        if not fname:
+            return
         else:
-            logging.error('Unknown queue priority request')
+            ds,sts,ks=self.gather_run_parameters()
+            config_file=self.generate_config_file(ds,sts,ks)
+            shutil.copy(config_file.name,fname)
 
-        m.unlock()
-        
+    def open_config_file_callback(self):
+        fname=QtGui.QFileDialog.getOpenFileName(self,'Open file','/home')
+        if not fname:
+            return
+        else:
+            config_dict=load_config(fname)
+            self.set_gui_from_config(config_dict)
+
+    def generate_config_file(self,doses,slice_thicknesses,kernels):
+        f=tempfile.NamedTemporaryFile()
+
+        case_string   = "case_list: %s\n" % self.current_case_list_path
+        lib_string    = "library: %s\n" % self.current_library.path
+        dose_string   = "doses: %s\n" % str([float(d) for d in doses])
+        sts_string    = "slice_thickness: %s\n" % str([float(s) for s in slice_thicknesses])
+        kernel_string = "kernels: %s\n" % str([int(k) for k in kernels])
+
+        # Write required info
+        f.write(case_string)
+        f.write(lib_string)
+
+        # Write optional info if specified by user
+        if doses:
+            f.write(dose_string)
+        if slice_thicknesses:
+            f.write(sts_string)
+        if kernels:
+            f.write(kernel_string)
+
+        f.seek(0,0)
+            
+        return f
+
+    def launch_pipeline(self,config_file):
+        # Test code:
+        #print('')
+        print(config_file.name)
+        print(config_file.read())
+                    
     def error_dialog(self,s):
         msg = QtGui.QMessageBox();
         msg.setIcon(QtGui.QMessageBox.Critical)
@@ -346,7 +378,6 @@ class MyWindow(QtGui.QMainWindow):
         if error_list:
             self.ui.error_listWidget.addItems(error_list)
 
-
 class MyTableModel(QtCore.QAbstractTableModel):
     header_labels=['File','Case ID','Dose','Kernel','Slice Thickness','Recon Path']
     
@@ -381,16 +412,6 @@ class MyTableModel(QtCore.QAbstractTableModel):
             self.arraydata.reverse()
         self.emit(QtCore.SIGNAL("layoutChanged()"))
 
-def load_config(filepath):
-    # Load pipeline run from YAML configuration file 
-    with open(sys.argv[1],'r') as f:
-        yml_string=f.read();
-
-    config_dict=yaml.load(yml_string)
-
-    # We only require that a case list and output library be defined
-    if ('case_list' not in config_dict.keys()) or ('library' not in config_dict.keys()):
-        
 def get_base_parameter_files(file_list):
     logging.info('Generating parameter files and reading into pipeline');
 
@@ -414,13 +435,14 @@ def get_base_parameter_files(file_list):
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
 
+    config_dict={}
+
     if (len(sys.argv)>1) and (sys.argv[1]=='--debug'):
         # Debug testing (dumps logging info to shell)
         logging.basicConfig(format=('%(asctime)s %(message)s'), level=logging.DEBUG)
-    elif (len(sys.argv)>1) and (os.path.exists(sys.argv[1])):
-
-    else:
-        
+    elif (len(sys.argv)>1) and os.path.exists(sys.argv[1]):
+        config_dict=load_config(sys.argv[1])        
+    else:        
         logdir=tempfile.gettempdir()
         logfile=os.path.join(logdir,('%s_interface.log' % strftime('%y%m%d_%H%M%S')))
 
@@ -429,7 +451,7 @@ if __name__ == '__main__':
 
         logging.basicConfig(format=('%(asctime)s %(message)s'),filename=logfile, level=logging.INFO)
 
-    window = MyWindow()
+    window = MyWindow(config_dict)
 
     status=app.exec_()
     if window.current_library:
