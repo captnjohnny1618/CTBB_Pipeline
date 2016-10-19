@@ -4,7 +4,10 @@ import sys
 import os
 
 import csv
+import numpy as np
 from datetime import datetime
+
+from ctbb_pipeline_library import ctbb_pipeline_library 
 
 def mine_qi_logfile(filepath):
 
@@ -17,12 +20,14 @@ def mine_qi_logfile(filepath):
     metrics={}
 
     metrics['filename']=filepath
+    print(filepath)
     
     # Grab the logfile
     with open(filepath,'r') as f:
         logfile=f.read().splitlines()
 
     def extract_logfile_time(keyphrase):
+        t=datetime(1900,12,12)
         for line in logfile:
             if keyphrase in line:
                 s=line.split(',')
@@ -76,16 +81,37 @@ if __name__=="__main__":
     ## Our final product should be a CSV file containing all of the raw data
     ## as well as a line summarizing the totals and averages for each process
 
-    ## Desired summary data
-    # Total time
-    # Total recon time
-    # Total simdose time
-    # Total data fetch time
+    ## Read CSV and calculate summary data
+    data=np.genfromtxt(os.path.join(logdir,'metrics.csv'),dtype=float,delimiter=',',names=True)
 
-    # Average fetch time
-    # Average time per recon
-    # Average time per dose reduction
-    # Average total time per 
+    # Calculate totals
+    total_time                = data['time_total'].sum()
+    total_recon_time          = data['time_recon'].sum()
+    total_dose_reduction_time = data['time_dose_reduction'].sum()
+    total_data_fetch_time     = data['time_fetch_raw'].sum()
+                                
+    # Calculate averages        
+    avg_time                  = data['time_total'].mean()
+    avg_recon_time            = data['time_recon'].mean()
+    avg_dose_reduction_time   = data['time_dose_reduction'].mean()
+    avg_data_fetch_time       = data['time_fetch_raw'].mean()
 
-    
-    
+    avg_nonzero_dose_reduction_time = data['time_dose_reduction'].sum()/((data['time_dose_reduction']!=0).sum())
+    avg_nonzero_data_fetch_time     = data['time_fetch_raw'].sum()/((data['time_fetch_raw']!=0).sum())
+
+    with open(os.path.join(logdir,'summary_metrics.yml'),'w') as f:
+        def printout(tag,value):
+            f.write("%s: %s\n" % (str(tag),str(value)))
+            
+        printout("total_time",total_time)
+        printout("total_recon_time",total_recon_time)
+        printout("total_dose_reduction_time",total_dose_reduction_time)
+        printout("total_data_fetch_time",total_data_fetch_time)
+        
+        printout("avg_time",avg_time)
+        printout("avg_recon_time",avg_recon_time)
+        printout("avg_dose_reduction_time",avg_dose_reduction_time)
+        printout("avg_data_fetch_time",avg_data_fetch_time)
+
+        printout("avg_nonzero_dose_reduction_time",avg_nonzero_dose_reduction_time)
+        printout("avg_nonzero_data_fetch_time",avg_nonzero_data_fetch_time)
