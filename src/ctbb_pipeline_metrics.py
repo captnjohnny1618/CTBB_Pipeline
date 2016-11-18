@@ -35,6 +35,9 @@ def mine_qi_logfile(filepath):
 
         return t
 
+    metrics['start_time']=extract_logfile_time('START: QUEUE ITEM')
+    metrics['end_time']=extract_logfile_time('END: QUEUE ITEM')
+    
     # Total execution time:
     tdelta=extract_logfile_time('END: QUEUE ITEM')-extract_logfile_time('START: QUEUE ITEM')
     #print('Total time: %.2f' % tdelta.total_seconds());
@@ -65,6 +68,9 @@ if __name__=="__main__":
     files=[f for f in os.listdir(logdir) if os.path.isfile(os.path.join(logdir,f))]
     files=[os.path.join(logdir,f) for f in files]
 
+    start_time=datetime.now();
+    end_time=datetime.min;
+
     header_written=False
     with open(os.path.join(logdir,'metrics.csv'),'wb') as f:
         for filename in files:
@@ -77,10 +83,13 @@ if __name__=="__main__":
                     w.writeheader()
 
                 w.writerow(metrics_dict);
-                
-    ## Our final product should be a CSV file containing all of the raw data
-    ## as well as a line summarizing the totals and averages for each process
 
+                if metrics_dict['start_time']<start_time:
+                    start_time=metrics_dict['start_time']
+
+                if metrics_dict['end_time']>end_time:
+                    end_time=metrics_dict['end_time']
+                
     ## Read CSV and calculate summary data
     data=np.genfromtxt(os.path.join(logdir,'metrics.csv'),dtype=float,delimiter=',',names=True)
 
@@ -102,6 +111,9 @@ if __name__=="__main__":
     with open(os.path.join(logdir,'summary_metrics.yml'),'w') as f:
         def printout(tag,value):
             f.write("%s: %s\n" % (str(tag),str(value)))
+
+        tdelta=end_time-start_time;
+        printout("real_time",tdelta.total_seconds())
             
         printout("total_time",total_time)
         printout("total_recon_time",total_recon_time)
