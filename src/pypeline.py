@@ -139,4 +139,81 @@ class case_list:
             s=s.replace('%','#')
             self.prmbs.append(yaml.load(s))
 
+
+class study_directory:
+    path=None
+    log_dir=None;
+    img_dir=None;
+    
+    def __init__(self,path):
+        self.path=path
+        self.log_dir=os.path.join(self.path,'log')
+        self.img_dir=os.path.join(self.path,'img')
+        
+        if not self.is_study():
+            self.initialize_new_study()
+        else:
+            if not self.is_valid():
+                self.repair()
+
+            self.load()
+
+    def initialize_new_study(self):
+        touch(os.path.join(self.path,'.ctbb_pipeline_study'))
+        os.mkdir(os.path.join(self.path,'img'))
+        os.mkdir(os.path.join(self.path,'seg'))
+        os.mkdir(os.path.join(self.path,'log'))
+        os.mkdir(os.path.join(self.path,'qi_raw'))
+        os.mkdir(os.path.join(self.path,'ref'))
+        os.mkdir(os.path.join(self.path,'eval'))
+        os.mkdir(os.path.join(self.path,'qa'))
+
+    def is_study(self):
+        if os.path.exists(os.path.join(self.path,'.ctbb_pipeline_study')):
+            tf=True
+        else:
+            tf=False
+        return tf
+
+    def is_valid(self):
+        tf=True
+
+        tf = tf and os.path.isdir(os.path.join(self.path,'img'))
+        tf = tf and os.path.isdir(os.path.join(self.path,'seg'))
+        tf = tf and os.path.isdir(os.path.join(self.path,'log'))
+        tf = tf and os.path.isdir(os.path.join(self.path,'qi_raw'))
+        tf = tf and os.path.isdir(os.path.join(self.path,'ref'))
+        tf = tf and os.path.isdir(os.path.join(self.path,'eval'))
+        tf = tf and os.path.isdir(os.path.join(self.path,'qa'))
+
+        return tf;
+
+
+    def repair(self):
+        if not os.path.isdir(os.path.join(self.path,'img')):
+            os.mkdir(os.path.join(self.path,'img'))
+        if not os.path.isdir(os.path.join(self.path,'seg')):
+            os.mkdir(os.path.join(self.path,'seg'))
+        if not os.path.isdir(os.path.join(self.path,'log')):
+            os.mkdir(os.path.join(self.path,'log'))
+        if not os.path.isdir(os.path.join(self.path,'qi_raw')):
+            os.mkdir(os.path.join(self.path,'qi_raw'))
+        if not os.path.isdir(os.path.join(self.path,'ref')):
+            os.mkdir(os.path.join(self.path,'ref'))
+        if not os.path.isdir(os.path.join(self.path,'eval')):
+            os.mkdir(os.path.join(self.path,'eval'))
+        if not os.path.isdir(os.path.join(self.path,'qa')):
+            os.mkdir(os.path.join(self.path,'qa'))
+
+    def load(self):
+        logging.info("Nothing to be done to load study_directory")
             
+#    def descriptions(self):
+#        def printout(d,f,s):
+#            with open(os.path.join(self.path,f),'w') as fid:
+#                fid.write(s);
+
+            
+            
+
+

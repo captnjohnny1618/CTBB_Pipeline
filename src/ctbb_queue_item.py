@@ -9,6 +9,8 @@ from time import strftime
 
 import traceback
 
+import pypeline as pype
+
 from ctbb_pipeline_library import ctbb_pipeline_library as ctbb_plib
 from pypeline import mutex
 
@@ -33,6 +35,7 @@ class ctbb_queue_item:
     device          = None
     device_mutex    = None
     run_dir         = None
+    study_dir       = None
 
     def __init__(self,qi,device,library):
         self.qi_raw          = qi;
@@ -56,6 +59,13 @@ class ctbb_queue_item:
     def __exit__(self,type,value,traceback):
         self.device.unlock()
 
+    def initialize_study(self):        
+        study_dir_path=os.path.join(self.current_library.recon_dir,str(self.dose),( '%s_k%s_st%s' % (self.case_id,self.kernel,self.slice_thickness)))
+        if not os.path.isdir(study_dir_path):
+            os.makedirs(study_dir_path)
+
+        self.study_dir=pype.study_directory(study_dir_path) # Constructor handles checking for valid directory, etc.
+        
     def get_raw_data(self):
         exit_status=qi_status.SUCCESS;
         logging.info('Making sure we have raw data files')
@@ -79,11 +89,16 @@ class ctbb_queue_item:
         # Configure all of the paths we'll be using. Create any that don't already exist.
         base_filename=os.path.basename(self.filepath)
         prmb_filepath=os.path.join(self.current_library.raw_dir,base_filename + '.prmb');
+
+        prm_dirpath=os.path.join(self.study_dir.path,'img')
+        
         prm_dirpath=os.path.join(self.current_library.recon_dir,str(self.dose),( '%s_k%s_st%s' % (self.case_id,self.kernel,self.slice_thickness)))
         if not os.path.isdir(prm_dirpath):
             os.makedirs(prm_dirpath)
+            
         prm_filepath=os.path.join(prm_dirpath,("%s_d%s_k%s_st%s.prm" % (self.case_id,self.dose,self.kernel,self.slice_thickness)));
 
+        
         # Copy the base parameter file into the final output dir
         try :
             shutil.copy(prmb_filepath,prm_filepath)
@@ -128,7 +143,21 @@ class ctbb_queue_item:
         return exit_status
         
     def clean_up(self,exit_status):
-        # Move job into ".proc/done" or ".proc/error" files
+        ## Move files into the proper study directories
+        from glob import glob
+        # Logs
+        stdouts=glob(os.path.join(self.study_dir.path,'*.std*'))
+        logs=glob(os.path.join(self.study_dir.path,'*.log'))
+        for f in (stdouts+logs):
+            os.rename(f,os.path.join(self.study_dir.log_dir,os.path.basename(f)))
+
+        # Images and metadata
+        imgs=glob(os.path.join(self.study_dir.path,'*.img'))
+        meta=glob(os.path.join(self.study_dir.path,'*.prm'))
+        for f in (imgs+meta):
+            os.rename(f,os.path.join(self.study_dir.img_dir,os.path.basename(f)))
+        
+        ## Move job into ".proc/done" or ".proc/error" files
 
         if exit_status == qi_status.SUCCESS:
             done_mutex=mutex('done',self.current_library.mutex_dir)
@@ -180,13 +209,18 @@ if __name__=="__main__":
             logging.info('START: QUEUE ITEM')
             
             exit_status=qi_status.SUCCESS
-            
+
             # Check for (and acquire if needed) 100% raw data
             logging.info('START: FETCH RAW')
             if exit_status==qi_status.SUCCESS:
                 exit_status=queue_item.get_raw_data()
             logging.info('END: FETCH RAW')
-                
+
+            # Create the study directory
+            logging.info('Creating new study directory')
+            queue_item.initialize_study()
+            logging.info('Done creating study directory')
+                        
             # If doing reduced dose, check for (and simulate if needed) reduced-dose data
             logging.info('START: DOSE REDUCTION')
             if exit_status==qi_status.SUCCESS:    
@@ -210,7 +244,7 @@ if __name__=="__main__":
             logging.info('END: QUEUE ITEM')
             logging.info('FINAL STATUS: %d',exit_status)
             
-        shutil.copy(logfile,os.path.join(os.path.dirname(queue_item.prm_filepath),os.path.basename(logfile)))
+        shutil.copy(logfile,os.path.join(queue_item.study_dir.log_dir,os.path.basename(logfile)))
 
     except NameError:
         exc_type, exc_value, exc_traceback = sys.exc_info()     
