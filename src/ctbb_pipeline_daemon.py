@@ -80,8 +80,11 @@ class ctbb_daemon:
                 qi=self.pop_queue_item()
                 logging.debug('Popping %s from queue' % qi)
                 self.process_queue_item(qi,dev)
-
+            
             self.queue_mutex.unlock()
+
+            self.pipeline_lib.refresh_recon_list();
+            
             time.sleep(5)
 
     def pop_queue_item(self):
