@@ -9,6 +9,8 @@ from time import strftime
 
 import traceback
 
+import pypeline as pype
+
 from ctbb_pipeline_library import ctbb_pipeline_library as ctbb_plib
 from pypeline import mutex
 
@@ -33,6 +35,7 @@ class ctbb_queue_item:
     device          = None
     device_mutex    = None
     run_dir         = None
+    study_dir       = None
 
     def __init__(self,qi,device,library):
         self.qi_raw          = qi;
@@ -56,6 +59,13 @@ class ctbb_queue_item:
     def __exit__(self,type,value,traceback):
         self.device.unlock()
 
+    def initialize_study(self):        
+        study_dir_path=os.path.join(self.current_library.recon_dir,str(self.dose),( '%s_k%s_st%s' % (self.case_id,self.kernel,self.slice_thickness)))
+        if not os.path.isdir(study_dir_path):
+            os.makedirs(study_dir_path)
+
+        self.study_dir=pype.study_directory(study_dir_path) # Constructor handles checking for valid directory, etc.
+        
     def get_raw_data(self):
         exit_status=qi_status.SUCCESS;
         logging.info('Making sure we have raw data files')
@@ -180,13 +190,18 @@ if __name__=="__main__":
             logging.info('START: QUEUE ITEM')
             
             exit_status=qi_status.SUCCESS
-            
+
             # Check for (and acquire if needed) 100% raw data
             logging.info('START: FETCH RAW')
             if exit_status==qi_status.SUCCESS:
                 exit_status=queue_item.get_raw_data()
             logging.info('END: FETCH RAW')
-                
+
+            # Create the study directory
+            logging.info('Creating new study directory')
+            queue_item.initialize_study()
+            logging.info('Done creating study directory')
+                        
             # If doing reduced dose, check for (and simulate if needed) reduced-dose data
             logging.info('START: DOSE REDUCTION')
             if exit_status==qi_status.SUCCESS:    

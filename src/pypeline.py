@@ -199,6 +199,9 @@ class study_directory:
             os.mkdir(os.path.join(self.path,'eval'))
         if not os.path.isdir(os.path.join(self.path,'qa')):
             os.mkdir(os.path.join(self.path,'qa'))
+
+    def load(self):
+        logging.info("Nothing to be done to load study_directory")
             
 #    def descriptions(self):
 #        def printout(d,f,s):
