@@ -173,7 +173,8 @@ class ctbb_pipeline_library:
         case_list=self.__get_case_list__()
         
         # Get list of all IMG files in recon directory
-        paths=glob(os.path.join(self.path,'recon','*/*/*.img'))
+        #paths=glob(os.path.join(self.path,'recon','*/*/*.img'))
+        paths=glob(os.path.join(self.path,'recon','*','*','*','*.img'))
 
         # Parse paths into sensible things:
         filenames=[]
@@ -191,14 +192,15 @@ class ctbb_pipeline_library:
             curr_item[2]=curr_item[2].strip('k')  # kernel
             curr_item[3]=curr_item[3].strip('st') # slice thickness
             
-            curr_item.insert(0,case_list[curr_item[0]]) # inserts the orignal case filepath at beginning of list
+            curr_item.insert(0,case_list[curr_item[0]]) # inserts the original case filepath at beginning of list
             curr_item.append(paths[i]) # appends full path to reconstruction at end of list
 
             csv_entries[i]=curr_item
 
         import csv
-        with open(os.path.join(self.path,'recons.csv'),'w') as f:
-            wr=csv.writer(f,quoting=csv.QUOTE_MINIMAL)
+        with open(os.path.join(self.path,'recons.csv'),'wb') as f:
+            wr=csv.writer(f,quoting=csv.QUOTE_MINIMAL,lineterminator=os.linesep)
+            wr.writerow(['org_raw_filepath','pipeline_id','dose','kernel','slice_thickness','img_series_filepath'])
             for c in csv_entries:
                 wr.writerow(c)
             
