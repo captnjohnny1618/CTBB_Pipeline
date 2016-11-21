@@ -89,11 +89,16 @@ class ctbb_queue_item:
         # Configure all of the paths we'll be using. Create any that don't already exist.
         base_filename=os.path.basename(self.filepath)
         prmb_filepath=os.path.join(self.current_library.raw_dir,base_filename + '.prmb');
+
+        prm_dirpath=os.path.join(self.study_dir.path,'img')
+        
         prm_dirpath=os.path.join(self.current_library.recon_dir,str(self.dose),( '%s_k%s_st%s' % (self.case_id,self.kernel,self.slice_thickness)))
         if not os.path.isdir(prm_dirpath):
             os.makedirs(prm_dirpath)
+            
         prm_filepath=os.path.join(prm_dirpath,("%s_d%s_k%s_st%s.prm" % (self.case_id,self.dose,self.kernel,self.slice_thickness)));
 
+        
         # Copy the base parameter file into the final output dir
         try :
             shutil.copy(prmb_filepath,prm_filepath)
@@ -138,7 +143,21 @@ class ctbb_queue_item:
         return exit_status
         
     def clean_up(self,exit_status):
-        # Move job into ".proc/done" or ".proc/error" files
+        ## Move files into the proper study directories
+        from glob import glob
+        # Logs
+        stdouts=glob(os.path.join(self.study_dir.path,'*.std*'))
+        logs=glob(os.path.join(self.study_dir.path,'*.log'))
+        for f in (stdouts+logs):
+            os.rename(f,os.path.join(self.study_dir.log_dir,os.path.basename(f)))
+
+        # Images and metadata
+        imgs=glob(os.path.join(self.study_dir.path,'*.img'))
+        meta=glob(os.path.join(self.study_dir.path,'*.prm'))
+        for f in (imgs+meta):
+            os.rename(f,os.path.join(self.study_dir.img_dir,os.path.basename(f)))
+        
+        ## Move job into ".proc/done" or ".proc/error" files
 
         if exit_status == qi_status.SUCCESS:
             done_mutex=mutex('done',self.current_library.mutex_dir)
@@ -225,7 +244,7 @@ if __name__=="__main__":
             logging.info('END: QUEUE ITEM')
             logging.info('FINAL STATUS: %d',exit_status)
             
-        shutil.copy(logfile,os.path.join(os.path.dirname(queue_item.prm_filepath),os.path.basename(logfile)))
+        shutil.copy(logfile,os.path.join(queue_item.study_dir.log_dir,os.path.basename(logfile)))
 
     except NameError:
         exc_type, exc_value, exc_traceback = sys.exc_info()     

@@ -142,9 +142,14 @@ class case_list:
 
 class study_directory:
     path=None
-
+    log_dir=None;
+    img_dir=None;
+    
     def __init__(self,path):
         self.path=path
+        self.log_dir=os.path.join(self.path,'log')
+        self.img_dir=os.path.join(self.path,'img')
+        
         if not self.is_study():
             self.initialize_new_study()
         else:
