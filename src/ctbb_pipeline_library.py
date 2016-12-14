@@ -21,12 +21,14 @@ class ctbb_pipeline_library:
     mutex_dir=None;    
     raw_dir=None;
     recon_dir=None;
+    log_dir=None;
 
     def __init__(self,path):
         self.path=path;
         self.mutex_dir=os.path.join(path,'.proc','mutex');
         self.raw_dir=os.path.join(path,'raw');
         self.recon_dir=os.path.join(path,'recon');
+        self.log_dir=os.path.join(path,'log');
         
         if not self.is_library():
             self.initialize_new_library()
@@ -169,6 +171,21 @@ class ctbb_pipeline_library:
 
         return exit_status
 
+    def get_recon_list(self):
+        # Returns a list of dictionaries
+        import csv
+        csv_filepath=os.path.join(self.path,'recons.csv')
+
+        # CSV reader method
+        # Create a list of dictionaries
+        recon_list=[]
+        with open(csv_filepath,'r') as f:            
+            reader=csv.DictReader(f);
+            for row in reader:
+                recon_list.append(row)
+
+        return recon_list
+                
     def refresh_recon_list(self):
         case_list=self.__get_case_list__()
         
@@ -255,16 +272,6 @@ class ctbb_pipeline_library:
         #subprocess.Popen(c.split(' '),stderr=devnull,stdout=devnull) # non-blocking
         logging.debug('System call exited with status %s' % str(exit_code))
         return exit_code
-
-    # def __add_finished_recon__(self,entry):
-        
-    #     recon_list_mutex=mutex('recon_list',self.mutex_dir)
-    #     recon_list_mutex.lock();
-
-    #     with open(os.path.join(self.path,'recons.csv')):
-            
-
-        # recon_list_mutex.unlock();
                   
 def touch(path):
     with open(path,'a'):
