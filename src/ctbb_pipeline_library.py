@@ -47,6 +47,7 @@ class ctbb_pipeline_library:
         os.mkdir(os.path.join(self.path,'raw'))
         os.mkdir(os.path.join(self.path,'recon'))
         os.mkdir(os.path.join(self.path,'log'))
+        os.mkdir(os.path.join(self.path,'qa'))        
         os.mkdir(os.path.join(self.path,'.proc'))
         os.mkdir(os.path.join(self.path,'.proc','mutex'))
         touch(os.path.join(self.path,'.proc','queue'))
@@ -71,7 +72,8 @@ class ctbb_pipeline_library:
         tf = tf and os.path.exists(os.path.join(self.path,'README.txt'))
         tf = tf and os.path.isdir(os.path.join(self.path,'raw'))
         tf = tf and os.path.isdir(os.path.join(self.path,'recon'))
-        tf = tf and os.path.isdir(os.path.join(self.path,'log'))        
+        tf = tf and os.path.isdir(os.path.join(self.path,'log'))
+        tf = tf and os.path.isdir(os.path.join(self.path,'qa'))
         tf = tf and os.path.isdir(os.path.join(self.path,'.proc'))
         tf = tf and os.path.isdir(os.path.join(self.path,'.proc','mutex'))        
         tf = tf and os.path.exists(os.path.join(self.path,'.proc','queue'))
@@ -98,7 +100,9 @@ class ctbb_pipeline_library:
         if not os.path.isdir(os.path.join(self.path,'recon')):            
             os.mkdir(os.path.join(self.path,'recon'))
         if not os.path.isdir(os.path.join(self.path,'log')):
-            os.mkdir(os.path.join(self.path,'log'))            
+            os.mkdir(os.path.join(self.path,'log'))
+        if not os.path.isdir(os.path.join(self.path,'qa')):
+            os.mkdir(os.path.join(self.path,'qa'))                     
         if not os.path.isdir(os.path.join(self.path,'.proc')):            
             os.mkdir(os.path.join(self.path,'.proc'))
         if not os.path.isdir(os.path.join(self.path,'.proc','mutex')):            
@@ -215,7 +219,8 @@ class ctbb_pipeline_library:
             csv_entries[i]=curr_item
 
         import csv        
-        with open(os.path.join(self.path,'recons.csv'),'w',newline='') as f:
+        #with open(os.path.join(self.path,'recons.csv'),'w',newline='') as f:
+        with open(os.path.join(self.path,'recons.csv'),'w') as f:            
             wr=csv.writer(f,quoting=csv.QUOTE_MINIMAL,lineterminator=os.linesep)
             wr.writerow(['org_raw_filepath','pipeline_id','dose','kernel','slice_thickness','img_series_filepath'])
             for c in csv_entries:
