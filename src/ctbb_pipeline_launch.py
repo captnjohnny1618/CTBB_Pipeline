@@ -64,6 +64,10 @@ def flush_jobs_to_queue(config,case_list,library):
 if __name__=='__main__':
 
     status = 0
+
+    # Ensure that user launched with python3
+    if sys.version_info < (3,0):
+        sys.exit('Relaunch with Python3')
     
     # Conigure how to launch pipeline based on command line input
     run_dir=os.path.dirname(os.path.abspath(__file__))
@@ -92,6 +96,7 @@ if __name__=='__main__':
 
             # Flush PRMBs to pipeline library
             for i in range(len(case_list.prmbs_raw)):
+                print(i)
                 output_file_name=os.path.basename(case_list.case_list[i])+'.prmb'
                 output_dir_name=os.path.join(library.path,'raw')
                 output_fullpath=os.path.join(output_dir_name,output_file_name);
@@ -105,7 +110,7 @@ if __name__=='__main__':
     
             # Launch the daemon in the background
             logging.info('Launching pipeline daemon')
-            command="python %s/ctbb_pipeline_daemon.py %s" % (run_dir,library.path)
+            command="python3 %s/ctbb_pipeline_daemon.py %s" % (run_dir,library.path)
             os.system("nohup %s >/dev/null 2>&1 &" % command);
             
         # Configuration didn't load properly

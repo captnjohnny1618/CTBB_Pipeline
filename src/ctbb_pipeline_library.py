@@ -219,8 +219,8 @@ class ctbb_pipeline_library:
             csv_entries[i]=curr_item
 
         import csv        
-        #with open(os.path.join(self.path,'recons.csv'),'w',newline='') as f:
-        with open(os.path.join(self.path,'recons.csv'),'w') as f:            
+        with open(os.path.join(self.path,'recons.csv'),'w',newline='') as f:
+        #with open(os.path.join(self.path,'recons.csv'),'w') as f:            
             wr=csv.writer(f,quoting=csv.QUOTE_MINIMAL,lineterminator=os.linesep)
             wr.writerow(['org_raw_filepath','pipeline_id','dose','kernel','slice_thickness','img_series_filepath'])
             for c in csv_entries:

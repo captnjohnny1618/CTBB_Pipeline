@@ -125,7 +125,7 @@ class ctbb_queue_item:
 
             self.prm_filepath=prm_filepath
                 
-        except IOError, e:
+        except IOError as e:
             logging.info("Something went wrong when creating PRM file: %s" % e)
             exit_status=qi_status.PRM_CREATION_ERROR            
             

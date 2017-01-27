@@ -105,7 +105,7 @@ class ctbb_daemon:
 
     def process_queue_item(self,qi,dev):
         logging.debug('Current queue item is: %s for device %s' % (qi,dev.name))
-        call_command = ('python %s/ctbb_queue_item.py %s %s %s' % (self.run_dir,qi,dev.name,self.pipeline_lib.path))
+        call_command = ('python3 %s/ctbb_queue_item.py %s %s %s' % (self.run_dir,qi,dev.name,self.pipeline_lib.path))
         logging.debug('Sending to system call: %s' % call_command)
         self.__child_process__(call_command)
         
@@ -144,7 +144,7 @@ if __name__=="__main__":
             with ctbb_daemon(library_path) as ctbb_pd:
                 ctbb_pd.run();
     
-            shutil.copyfile(logfile,os.path.join(ctbb_pd.pipeline_lib.path))
+            shutil.copy(logfile,os.path.join(ctbb_pd.pipeline_lib.log_dir))
     
         # If instance already running on current dir, exit    
         else:
