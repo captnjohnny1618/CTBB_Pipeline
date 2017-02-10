@@ -9,6 +9,8 @@ import yaml
 
 from subprocess import call
 
+import numpy as np
+
 def touch(path):
     with open(path,'a'):
         os.utime(path,None);
@@ -214,7 +216,7 @@ class study_directory:
 #                fid.write(s);
 
 class pipeline_img_series:
-    from collections import namedtuple
+    from collections import namedtuple    
     fields=('StartPos'
             ' EndPos'
             ' DataCollectionDiameter'
@@ -231,13 +233,116 @@ class pipeline_img_series:
             ' TableFeedPerRotation'
             ' SingleCollimationWidth'
             ' TotalCollimationWidth'
-    )        
+            ' NoOfSlices'
+    )    
     header=namedtuple('header',fields)
     img_filepath=None
     prm_filepath=None
+    stack=None
     
     def __init__(self,img_filepath,prm_filepath):
+        ### Constructor reads PRM file and loads metadata. Note that image data is NOT
+        ### loaded by default. This is done through the to_memory() method.
+
+        # Copy our filepaths into the object
+        self.img_filepath=img_filepath
+        self.prm_filepath=prm_filepath
         
+        # Load up the "header" information
+        # I.E. Map the parameter file dictionary over to our headers structure
+        # Note: naming conventions are those given in MATLAB where applicable
+        # The MATLAB naming conventions follow the DICOM standard.
+        with open(self.prm_filepath,'r') as f:
+            string=f.read()
+            string=string.replace('\t',' ') # Pull out the tabs in case we're using old CTBangBang stuff
+            prm=yaml.load(string)
+
+        self.header.Width                             = prm['Nx']
+        self.header.Height                            = prm['Ny']            
+        self.header.StartPos                          = prm['StartPos']
+        self.header.EndPos                            = prm['EndPos']
+        self.header.DataCollectionDiameter            = prm['AcqFOV']
+        self.header.ReconstructionDiameter            = prm['ReconFOV']
+        self.header.ConvolutionKernel                 = prm['ReconKernel']
+        self.header.ImagePositionPatient              = None
+        self.header.ImageOrientationPatient           = prm['ImageOrientationPatient']
+        self.header.DataCollectionCenterPatient       = None
+        self.header.ReconstructionTargetCenterPatient = None
+        self.header.SliceThickness                    = prm['SliceThickness']
+        self.header.TableFeedPerRotation              = prm['PitchValue']
+        self.header.SingleCollimationWidth            = prm['CollSlicewidth']
+        self.header.TotalCollimationWidth             = float(prm['Nrows'])*prm['CollSlicewidth']
+        self.header.SpiralPitchFactor                 = self.header.TableFeedPerRotation/self.header.TotalCollimationWidth
+
+        # Determine the number of slices in the image
+        with open(self.img_filepath,'r') as f:
+            f.seek(0,os.SEEK_END)
+            eof=f.tell()
+            n_pixels=eof/4 # Pixels are single-precision floats (4 bytes)
+            self.header.NoOfSlices=int(n_pixels)/(int(self.header.Width)*int(self.header.Height))
+
+        # Print a copy of the mapped metadata
+        self.fields=self.fields.split(' ')
+        for f in self.fields:
+            print('{}: {}'.format(f,eval('self.header.{}'.format(f))))
+        
+    def to_memory(self):
+        ### Method to load the image stack into memory (as a numpy array)
+        with open(self.img_filepath,'r') as f:
+            f.seek(0,os.SEEK_SET);
+            self.stack=np.fromfile(f,'float32')
+        
+        #self.stack=np.fromfile(filepath,'float32');
+        self.stack=self.stack.reshape(self.stack.size/(self.header.Width*self.header.Height),self.header.Width,self.header.Height);
+        self.stack=1000*(self.stack-0.01926)/(0.01926)
+        self.stack=np.transpose(self.stack,(0,2,1))
+
+    def to_hr2(self,outpath):
+        ### Method to convert img file to hr2
+
+        pass
+
+    def to_DICOM(self,outpath):
+        ### Method to convert img file stack into individual DICOM images
+        pass
+
+#### This is garbage, we're not going to use this. For reference only
+if False:
+    class image_stack:
+        stack=None
+        curr_image=0
+        n_images=None
+        width=512
+        height=512
+    
+        def __init__(self,filepath,width,height,offset):
+            print('offset: ' + str(offset));
+            print('width: ' +  str(width ));
+            print('height: ' + str(height));
+    
+            self.width=width;
+            self.height=height;
+    
+            with open(filepath,'r') as f:
+    
+                f.seek(offset,os.SEEK_SET);
+                self.stack=np.fromfile(f,'float32')
+                print(self.stack.size)
             
+            #self.stack=np.fromfile(filepath,'float32');
+            self.stack=self.stack.reshape(self.stack.size/(self.width*self.height),self.width,self.height);
+            self.stack=1000*(self.stack-0.01923)/(0.01923)
+            stack_size=self.stack.shape
+            self.n_images=stack_size[0];
 
-
+        def __getitem__(self,key):
+            if (key in range(0,self.n_images)):
+                return self.stack[key,:,:]
+            else:
+                raise IndexError
+    
+        def next_image(self):
+            self.curr_image=min(self.curr_image+1,self.n_images-1);
+    
+        def prev_image(self):
+            self.curr_image=max(self.curr_image-1,0);
