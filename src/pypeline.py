@@ -213,7 +213,31 @@ class study_directory:
 #            with open(os.path.join(self.path,f),'w') as fid:
 #                fid.write(s);
 
-            
+class pipeline_img_series:
+    from collections import namedtuple
+    fields=('StartPos'
+            ' EndPos'
+            ' DataCollectionDiameter'
+            ' ReconstructionDiameter'
+            ' Width'
+            ' Height'
+            ' ConvolutionKernel'
+            ' ImagePositionPatient'
+            ' ImageOrientationPatient'
+            ' DataCollectionCenterPatient'
+            ' ReconstructionTargetCenterPatient'
+            ' SliceThickness'
+            ' SpiralPitchFactor'
+            ' TableFeedPerRotation'
+            ' SingleCollimationWidth'
+            ' TotalCollimationWidth'
+    )        
+    header=namedtuple('header',fields)
+    img_filepath=None
+    prm_filepath=None
+    
+    def __init__(self,img_filepath,prm_filepath):
+        
             
 
 
