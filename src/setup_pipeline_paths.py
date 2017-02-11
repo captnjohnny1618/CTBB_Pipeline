@@ -11,7 +11,7 @@ with open('paths.yml','w') as f:
         f.write("pipeline_library: /home/john/Code/CTBangBang_Pipeline/src/\n")
     elif platform.system()=='Windows':
         f.write("pipeline_library: \\\ldap\ldaphome\jhoffman\CTBB_Pipeline\src\ \r\n")
-
+        
     # Specify location of QIA library
     f.write("qia_module: \\\skynet\cvib\PechinTest2\scripts\qia_pipeline\src\ \n")
     

@@ -14,6 +14,12 @@ import numpy as np
 def touch(path):
     with open(path,'a'):
         os.utime(path,None);
+
+def load_paths():
+    print(os.getcwd()) 
+    with open('paths.yml','r') as f:
+        path_dict=yaml.load(f)    
+    return path_dict
         
 def load_config(filepath):
 
@@ -294,55 +300,24 @@ class pipeline_img_series:
         
         #self.stack=np.fromfile(filepath,'float32');
         self.stack=self.stack.reshape(self.stack.size/(self.header.Width*self.header.Height),self.header.Width,self.header.Height);
-        self.stack=1000*(self.stack-0.01926)/(0.01926)
-        self.stack=np.transpose(self.stack,(0,2,1))
+        self.stack=1000*(self.stack-0.01926)/(0.01926) # Convert to HU
+        self.stack=np.transpose(self.stack,(0,2,1)) # Images from CTBangBang are transposed, this corrects it
 
     def to_hr2(self,outpath):
         ### Method to convert img file to hr2
-
-        pass
+        try:
+            path_dict=load_paths()
+            sys.path.append(path_dict['qia_module'])            
+            import qia.common.img.image as qimage
+            VALUE_TYPE = qimage.Type.short
+        except Exception as e:            
+            logging.error("Could not load QIA module from which HR2 file format is derived.")
+            raise(e)
+            sys.exit("Exiting.")
+            
+        #self.converted_img = qimage.new(VALUE_TYPE, self.minp, self.maxp, spacing=new_spacing, origin=new_origin, orientation=new_orientation, fillval=0)
+ 
 
     def to_DICOM(self,outpath):
         ### Method to convert img file stack into individual DICOM images
         pass
-
-#### This is garbage, we're not going to use this. For reference only
-if False:
-    class image_stack:
-        stack=None
-        curr_image=0
-        n_images=None
-        width=512
-        height=512
-    
-        def __init__(self,filepath,width,height,offset):
-            print('offset: ' + str(offset));
-            print('width: ' +  str(width ));
-            print('height: ' + str(height));
-    
-            self.width=width;
-            self.height=height;
-    
-            with open(filepath,'r') as f:
-    
-                f.seek(offset,os.SEEK_SET);
-                self.stack=np.fromfile(f,'float32')
-                print(self.stack.size)
-            
-            #self.stack=np.fromfile(filepath,'float32');
-            self.stack=self.stack.reshape(self.stack.size/(self.width*self.height),self.width,self.height);
-            self.stack=1000*(self.stack-0.01923)/(0.01923)
-            stack_size=self.stack.shape
-            self.n_images=stack_size[0];
-
-        def __getitem__(self,key):
-            if (key in range(0,self.n_images)):
-                return self.stack[key,:,:]
-            else:
-                raise IndexError
-    
-        def next_image(self):
-            self.curr_image=min(self.curr_image+1,self.n_images-1);
-    
-        def prev_image(self):
-            self.curr_image=max(self.curr_image-1,0);
