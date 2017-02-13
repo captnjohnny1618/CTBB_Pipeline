@@ -16,7 +16,6 @@ def touch(path):
         os.utime(path,None);
 
 def load_paths():
-    print(os.getcwd()) 
     with open('paths.yml','r') as f:
         path_dict=yaml.load(f)    
     return path_dict
@@ -273,7 +272,7 @@ class pipeline_img_series:
         self.header.ImagePositionPatient              = None
         self.header.ImageOrientationPatient           = prm['ImageOrientationPatient']
         self.header.DataCollectionCenterPatient       = None
-        self.header.ReconstructionTargetCenterPatient = None
+        self.header.ReconstructionTargetCenterPatient = (prm['Xorigin'],prm['Yorigin'],prm['StartPos'])
         self.header.SliceThickness                    = prm['SliceThickness']
         self.header.TableFeedPerRotation              = prm['PitchValue']
         self.header.SingleCollimationWidth            = prm['CollSlicewidth']
@@ -285,7 +284,7 @@ class pipeline_img_series:
             f.seek(0,os.SEEK_END)
             eof=f.tell()
             n_pixels=eof/4 # Pixels are single-precision floats (4 bytes)
-            self.header.NoOfSlices=int(n_pixels)/(int(self.header.Width)*int(self.header.Height))
+            self.header.NoOfSlices=int(int(n_pixels)/(int(self.header.Width)*int(self.header.Height)))
 
         # Print a copy of the mapped metadata
         self.fields=self.fields.split(' ')
@@ -305,18 +304,81 @@ class pipeline_img_series:
 
     def to_hr2(self,outpath):
         ### Method to convert img file to hr2
+        ## Attempt to load the QIA toolbox, raise error if it doesn't work
         try:
             path_dict=load_paths()
             sys.path.append(path_dict['qia_module'])            
             import qia.common.img.image as qimage
-            VALUE_TYPE = qimage.Type.short
+            VALUE_TYPE = qimage.Type.short            
         except Exception as e:            
             logging.error("Could not load QIA module from which HR2 file format is derived.")
             raise(e)
             sys.exit("Exiting.")
-            
-        #self.converted_img = qimage.new(VALUE_TYPE, self.minp, self.maxp, spacing=new_spacing, origin=new_origin, orientation=new_orientation, fillval=0)
- 
+
+        ## Translate PRM data into data appropriate for file conversion
+        # Calculate our spacing vector for hr2 conversion
+        Spacing_hr2=(self.header.ReconstructionDiameter/self.header.Width,
+                     self.header.ReconstructionDiameter/self.header.Height,
+                     self.header.SliceThickness)
+        
+        # Calculate hr2 appropriate orientation vector
+        x,y=self.header.ImageOrientationPatient
+        z=[ x[1]*y[2]-x[2]*y[1] ,
+            x[2]*y[0]-x[0]*y[2] ,
+            x[0]*y[1]-x[1]*y[0] ]
+        Orientation_hr2=(  x[0], y[0], z[0],
+                           x[1], y[1], z[1],
+                           x[2], y[2], z[2] )
+        
+        # Data Collection Center Patient
+        Origin_hr2 = self.header.ReconstructionTargetCenterPatient
+
+        # Image object dimensions
+        minp = (0, 0, 1)
+        maxp = (self.header.Width-1, self.header.Height-1, self.header.NoOfSlices)
+
+        print("Spacing_hr2     : {}".format(Spacing_hr2))
+        print("Orientation_hr2 : {}".format(Orientation_hr2))
+        print("Origin_hr2      : {}".format(Origin_hr2))
+        print("minp/maxp       : {} {}".format(minp,maxp))
+
+        ## Instantiate our qimage object (which has our hr2-saving methods)
+        converted_qimg = qimage.new(VALUE_TYPE, minp, maxp, spacing=Spacing_hr2, origin=Origin_hr2, orientation=Orientation_hr2, fillval=0)
+
+        ## Fill our image object slice-by-slice (to go easy on memory)
+        size_slice=self.header.Width*self.header.Height*4 # IMG files are single-precision floating point => 4 bytes per pixel
+        with open(self.img_filepath,'rb') as f:
+            for slice_idx in range(self.header.NoOfSlices):
+                print("{}/{}".format(slice_idx+1,self.header.NoOfSlices))
+                # Seek to the current slice (ultimately unnecessary, but nice for debugging the loop)
+                f.seek(size_slice*slice_idx)
+                # Read the slice into a numpy array
+                slice=f.read(size_slice)
+                slice=np.fromstring(slice,dtype=np.float32)                
+                slice=slice.reshape(self.header.Width,self.header.Height)
+                slice=slice.transpose() # Data from FreeCT is transposed
+                # Convert the slice to HU
+                slice=1000.0*(slice-0.01926)/0.01926
+                # Clamp off any values below -1024 like how DICOM does
+                # We may want to remove this in the future
+                slice[slice<-1024]=-1024
+
+                # Map the data into our qimage
+                # set_value(tuple of voxel indices, value to set to)
+                for x_idx in range(self.header.Width):
+                    for y_idx in range(self.header.Height):
+                        converted_qimg.set_value((x_idx,y_idx,slice_idx+1),slice[x_idx,y_idx])
+
+                #import matplotlib.pyplot as plt
+                #plt.imshow(slice,cmap='gray',imlim=[-1400,400])
+                #plt.show()
+
+        # Save the hr2 file to disk
+        hr2_out_filepath=outpath
+        print('Saving to {}'.format(hr2_out_filepath))
+        converted_qimg.write(hr2_out_filepath)
+        
+        print("Finished your stupid test you dummy")
 
     def to_DICOM(self,outpath):
         ### Method to convert img file stack into individual DICOM images
