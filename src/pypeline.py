@@ -11,15 +11,22 @@ from subprocess import call
 
 import numpy as np
 
+path_file="\\skynet\cvib\PechinTest2\scripts\paths.yml"
+
 def touch(path):
     with open(path,'a'):
         os.utime(path,None);
 
 def load_paths():
-    with open('paths.yml','r') as f:
-        path_dict=yaml.load(f)    
-    return path_dict
+    try:    
+        with open('paths.yml','r') as f:
+            path_dict=yaml.load(f)
+    except:
+        with open(path_file,'r') as f:
+            path_dict=yaml.load(f)
         
+    return path_dict
+
 def load_config(filepath):
 
     logging.info('Loading configuration file: %s' % filepath)
