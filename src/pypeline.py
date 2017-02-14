@@ -257,7 +257,7 @@ class pipeline_img_series:
         # I.E. Map the parameter file dictionary over to our headers structure
         # Note: naming conventions are those given in MATLAB where applicable
         # The MATLAB naming conventions follow the DICOM standard.
-        with open(self.prm_filepath,'r') as f:
+        with open(self.prm_filepath,'r',encoding='utf8') as f:
             string=f.read()
             string=string.replace('\t',' ') # Pull out the tabs in case we're using old CTBangBang stuff
             prm=yaml.load(string)
