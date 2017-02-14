@@ -258,8 +258,8 @@ class pipeline_img_series:
         # Note: naming conventions are those given in MATLAB where applicable
         # The MATLAB naming conventions follow the DICOM standard.
         with open(self.prm_filepath,'r',encoding='utf8') as f:
-            print(prm.filepath)
-            logging.error(prm.filepath)
+            print(self.prm_filepath)
+            logging.error(self.prm_filepath)
             string=f.read()
             string=string.replace('\t',' ') # Pull out the tabs in case we're using old CTBangBang stuff
             prm=yaml.load(string)
