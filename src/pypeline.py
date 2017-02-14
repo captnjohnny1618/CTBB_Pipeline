@@ -11,7 +11,7 @@ from subprocess import call
 
 import numpy as np
 
-path_file="\\skynet\cvib\PechinTest2\scripts\paths.yml"
+path_file="\\\skynet\cvib\PechinTest2\scripts\paths.yml"
 
 def touch(path):
     with open(path,'a'):
