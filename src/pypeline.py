@@ -376,7 +376,8 @@ class pipeline_img_series:
                 # set_value(tuple of voxel indices, value to set to)
                 for x_idx in range(self.header.Width):
                     for y_idx in range(self.header.Height):
-                        converted_qimg.set_value((x_idx,y_idx,slice_idx+1),slice[x_idx,y_idx])
+                        #converted_qimg.set_value((x_idx,y_idx,slice_idx+1),slice[x_idx,y_idx])
+                        converted_qimg.set_value((x_idx,y_idx,slice_idx+1),slice[y_idx,x_idx])
 
                 #import matplotlib.pyplot as plt
                 #plt.imshow(slice,cmap='gray',imlim=[-1400,400])
