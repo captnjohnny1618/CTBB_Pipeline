@@ -235,7 +235,8 @@ class ctbb_pipeline_library:
         if not os.path.isdir(out_dir):
             os.mkdir(out_dir)
         
-        os.rename(filepath_tmp,os.path.join(out_dir,digest))
+        #os.rename(filepath_tmp,os.path.join(out_dir,digest))
+        shutil.move(filepath_tmp,os.path.join(out_dir,digest))
         self.__add_to_case_list__(filepath_org,digest)
 
     def __add_to_case_list__(self,filepath,digest):

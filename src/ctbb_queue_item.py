@@ -149,13 +149,15 @@ class ctbb_queue_item:
         stdouts=glob(os.path.join(self.study_dir.path,'*.std*'))
         logs=glob(os.path.join(self.study_dir.path,'*.log'))
         for f in (stdouts+logs):
-            os.rename(f,os.path.join(self.study_dir.log_dir,os.path.basename(f)))
+            #os.rename(f,os.path.join(self.study_dir.log_dir,os.path.basename(f)))
+            shutil.move(f,os.path.join(self.study_dir.log_dir,os.path.basename(f)))
 
         # Images and metadata
         imgs=glob(os.path.join(self.study_dir.path,'*.img'))
         meta=glob(os.path.join(self.study_dir.path,'*.prm'))
         for f in (imgs+meta):
-            os.rename(f,os.path.join(self.study_dir.img_dir,os.path.basename(f)))
+            #os.rename(f,os.path.join(self.study_dir.img_dir,os.path.basename(f)))
+            shutil.move(f,os.path.join(self.study_dir.img_dir,os.path.basename(f)))
         
         ## Move job into ".proc/done" or ".proc/error" files
 
