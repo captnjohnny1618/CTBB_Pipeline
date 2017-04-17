@@ -77,9 +77,12 @@ class ctbb_daemon:
             logging.info(str(self.queue))
             
             for dev in self.get_empty_devices():
-                qi=self.pop_queue_item()
-                logging.debug('Popping %s from queue' % qi)
-                self.process_queue_item(qi,dev)
+                if self.queue:
+                    qi=self.pop_queue_item()
+                    logging.debug('Popping %s from queue' % qi)
+                    self.process_queue_item(qi,dev)
+                else:
+                    continue
             
             self.queue_mutex.unlock()
 
