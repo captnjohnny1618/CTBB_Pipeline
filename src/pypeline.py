@@ -62,8 +62,8 @@ def load_config(filepath):
             
         # Verify that the case list and library directory exist
         if not os.path.exists(config_dict['case_list']):
-            logging.error('Specified case_list does not exist. Exiting.')
-            config_dict={}
+            logging.error('Specified case_list does not exist.')
+            #config_dict={}
             
     return config_dict
         
@@ -265,7 +265,7 @@ class pipeline_img_series:
         # Note: naming conventions are those given in MATLAB where applicable
         # The MATLAB naming conventions follow the DICOM standard.
         with open(self.prm_filepath,'r',encoding='utf8') as f:
-            print(self.prm_filepath)
+            #print(os.path.abspath(self.prm_filepath))
             logging.error(self.prm_filepath)
             string=f.read()
             string=string.replace('\t',' ') # Pull out the tabs in case we're using old CTBangBang stuff

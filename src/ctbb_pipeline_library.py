@@ -248,7 +248,7 @@ class ctbb_pipeline_library:
         # Returns current case list as dictionary with filepaths as keys and file hashes as values
         case_list_dict={}
 
-        print(self.path)
+        #print(os.path.abspath(self.path))
         
         with open(os.path.join(self.path,'case_list.txt'),'r') as f:
             case_list=f.read().splitlines()
